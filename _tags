@@ -1,0 +1,6 @@
+true : package(pprint), package(unix)
+
+<src/common>    : include
+<src/utilities> : include
+<src/fopi>      : include
+<src/stacki>    : include
