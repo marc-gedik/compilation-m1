@@ -132,7 +132,7 @@ and expression position runtime = function
     Environment.lookup x runtime.environment
 
   | IfThenElse (c, t, f) ->
-    failwith "Student! This is your job!"
+    ifThenElse runtime c t f 
 
   | Define (x, ex, e) ->
     let v = expression' runtime ex in
@@ -188,6 +188,16 @@ and extract_observable runtime runtime' =
     new_environment =
       substract Environment.initial runtime.environment runtime'.environment
   }
+
+and ifThenElse runtime c t f = 
+    let expr = 
+	match expression (Position.position c) runtime (Position.value c) with
+	| VBool b when b = true -> t
+	| VBool _ -> f
+	| _ as value -> failwith (print_value value ^ " is not a bool")
+    in
+    expression (Position.position expr) runtime (Position.value expr)
+
 
 let print_observable runtime observation =
   Environment.print observation.new_environment
