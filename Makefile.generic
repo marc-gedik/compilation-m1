@@ -78,7 +78,7 @@ headers:
 
 clean:
 	@ $(OCAMLBUILD) -clean
-	find -name '*~' -exec rm '{}' \;
+	find . -name '*~' -exec rm '{}' \;
 	rm -fr *~ $(TARGET) $(PACKAGE) $(PACKAGE).tar.gz
 
 doc: byte

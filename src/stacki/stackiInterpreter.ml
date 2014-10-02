@@ -299,8 +299,8 @@ let evaluate runtime (ast : t) =
     | Div -> arith_binop ( / )
     | Sub -> arith_binop ( - )
     | EQ  -> cmp_binop (  =  )
-    | GT  -> cmp_binop (  <  )
-    | GTE -> cmp_binop (  <= )
+    | GT  -> cmp_binop (  >  )
+    | GTE -> cmp_binop (  >= )
     | LT  -> cmp_binop (  <  )
     | LTE -> cmp_binop (  <= )
 
