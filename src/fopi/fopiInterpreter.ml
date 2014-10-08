@@ -132,7 +132,7 @@ and expression position runtime = function
     Environment.lookup x runtime.environment
 
   | IfThenElse (c, t, f) ->
-    ifThenElse runtime c t f 
+    ifThenElse runtime c t f
 
   | Define (x, ex, e) ->
     let v = expression' runtime ex in
@@ -142,14 +142,25 @@ and expression position runtime = function
     in
     expression' runtime e
 
+  (** block_create (size, init) (init -> valeur dans chaque case) *)
   | FunCall (FunId "block_create", [size; init]) ->
-    failwith "Student! This is your job!"
+    let size = expression' runtime size in
+    let init = expression' runtime init in
+    VLocation (block_create size init)
 
+  (** block_get (block, index) *)
   | FunCall (FunId "block_get", [location; index]) ->
-    failwith "Student! This is your job!"
+    let location = expression' runtime location in
+    let index = expression' runtime index in
+    block_get location index
 
+  (** block_set block index valeur *)
   | FunCall (FunId "block_set", [location; index; e]) ->
-    failwith "Student! This is your job!"
+    let location = expression' runtime location in
+    let index = expression' runtime index in
+    let e = expression' runtime e in
+    block_set location index e;
+    VUnit
 
   | FunCall (FunId s, [e1; e2]) when is_binary_primitive s ->
     evaluation_of_binary_symbol runtime s e1 e2
@@ -189,15 +200,23 @@ and extract_observable runtime runtime' =
       substract Environment.initial runtime.environment runtime'.environment
   }
 
-and ifThenElse runtime c t f = 
-    let expr = 
-	match expression (Position.position c) runtime (Position.value c) with
+and ifThenElse runtime c t f =
+    let expr =
+	match expression' runtime c with
 	| VBool b when b = true -> t
 	| VBool _ -> f
 	| _ as value -> failwith (print_value value ^ " is not a bool")
     in
-    expression (Position.position expr) runtime (Position.value expr)
+    expression' runtime expr
 
+and block_create (VInt size) init =
+    Memory.allocate memory size init
+
+and block_get (VLocation location) (VInt index) =
+    Memory.read (Memory.dereference memory location) index
+
+and block_set (VLocation location) (VInt index) e =
+    Memory.write (Memory.dereference memory location) index e
 
 let print_observable runtime observation =
   Environment.print observation.new_environment
