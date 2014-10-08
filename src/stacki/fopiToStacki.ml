@@ -160,9 +160,17 @@ and expression pos env = function
     @ expression' (bind_variable env i) e2
 
   | Source.AST.IfThenElse (c, t, f) ->
-    failwith "Student! This is your job!"
 
-    failwith "Student! This is your job!"
+    let t = expression pos env (Position.value t)
+    and f = expression pos env (Position.value f)
+    in
+    let label_t, block_t = labelled_block "if_true_" t
+    and label_f, block_f = labelled_block "if_false_" f
+    in
+    expression' env c
+    @ (single_instruction (Target.AST.ConditionalJump (label_t, label_f)))
+    @ block_t
+    @ block_f
 
   | Source.AST.FunCall (Source.AST.FunId "block_set", [e1; e2; e3]) ->
     failwith "Student! This is your job!"
