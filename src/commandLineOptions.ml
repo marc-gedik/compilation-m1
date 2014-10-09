@@ -35,7 +35,7 @@ let generic_options = Arg.(align (List.flatten [
     ("(true|false) Set the compiler mode");
 
   options
-    ["--verbose"; "-v"]
+    ["--verbose"; "-V"]
     (Bool Options.set_verbose_mode)
     (" Ask the compiler to be verbose")
 
