@@ -8,7 +8,7 @@
 all: detect-bad-students all-generic
 
 # Please uncomment the following line.
-# STUDENTS=skywalker-vador
+STUDENTS=marc-gedik
 
 ifeq ($(strip $(STUDENTS)),)
 detect-bad-students:

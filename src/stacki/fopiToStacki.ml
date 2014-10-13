@@ -172,8 +172,8 @@ and expression pos env = function
     @ block_t
     @ block_f
 
-  | Source.AST.FunCall (Source.AST.FunId "block_set", [e1; e2; e3]) ->
-    failwith "Student! This is your job!"
+  (* | Source.AST.FunCall (Source.AST.FunId "block_set", [e1; e2; e3]) -> *)
+  (*   failwith "Student! This is your job!" *)
 
   (* </corrige> *)
   | Source.AST.FunCall (Source.AST.FunId f, [e1; e2])
@@ -183,8 +183,11 @@ and expression pos env = function
     @ expression' env e1
     @ (single_instruction (Target.AST.Binop (binop f)))
 
-  | Source.AST.FunCall (f, actuals) ->
-    failwith "Student! This is your job!"
+  | Source.AST.FunCall (Source.AST.FunId f, actuals) ->
+     let instructions = List.flatten (List.rev_map (expression' env) actuals) in
+     instructions 
+     @ single_instruction (Target.AST.Jump (Target.AST.Label f))
+
 
 and literal = function
   | Source.AST.LInt x -> Target.AST.Remember x

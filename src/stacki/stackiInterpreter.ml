@@ -269,13 +269,38 @@ let evaluate runtime (ast : t) =
       | Exit ->
         raise ExitNow
 
+      | Jump (Label "block_create") ->                                        
+         let DInt size = Stack.get 0 values in                                      
+         let init = Stack.get 1 values in                                      
+         Stack.pop values;                                                     
+         Stack.pop values;                                                     
+         Stack.push (DLocation (Memory.allocate memory size init)) values
+  
+           
+      | Jump (Label "block_get") ->
+         let DLocation location = Stack.get 0 values in
+	 let DInt index = Stack.get 1 values in 
+	 Stack.pop values;
+	 Stack.pop values;
+	 Stack.push (Memory.read (Memory.dereference memory location) index) values
+                  
+      | Jump (Label "block_set") ->    
+         let DLocation location = Stack.get 0 values in
+	 let DInt index = Stack.get 1 values in 
+	 let e = Stack.get 2 values in 
+	 Stack.pop values; 
+	 Stack.pop values;
+	 Stack.pop values;
+         Memory.write (Memory.dereference memory location) index e;
+	 Stack.push DUnit values
+
       | Jump l ->
-        jump l
+         jump l
 
       | UJump ->
-        let l = as_lbl (Stack.get 0 values) in
-        Stack.pop values;
-        jump l
+         let l = as_lbl (Stack.get 0 values) in
+         Stack.pop values;
+         jump l
 
       | ConditionalJump (tl, fl) ->
         let b = Stack.get 0 values in
