@@ -180,7 +180,7 @@ let initial_runtime () = {
 }
 
 let show_runtime runtime =
-  Printf.printf "=== Values ===\n%s=== Variables ===\n%s\n"
+  Printf.printf "=== Values ===\n%s\n=== Variables ===\n%s\n"
     (Stack.print print_data runtime.values)
     (Stack.print (fun (Id x, d) -> x ^ " = " ^ print_data d) runtime.variables)
 
