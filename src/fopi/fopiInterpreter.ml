@@ -67,8 +67,17 @@ end = struct
 
 end
 
+module FunEnv = 
+  Map.Make(
+      struct
+	type t = function_identifier
+	let compare = Pervasives.compare
+      end
+    )
+
 type runtime = {
   environment : Environment.t;
+  funEnvironment : (formals*expression located) FunEnv.t;
 }
 
 type observable = {
@@ -77,6 +86,7 @@ type observable = {
 
 let initial_runtime () = {
   environment = Environment.initial;
+  funEnvironment = FunEnv.empty;
 }
 
 (** 640k ought to be enough for anybody -- B.G. *)
@@ -92,8 +102,9 @@ and declaration runtime = function
     let v = expression' runtime e in
     let i = Position.value i in
     { runtime with environment = Environment.bind runtime.environment i v }
-  | DefineFunction _ ->
-    runtime
+  | DefineFunction (f, formals, e) ->
+     let f = Position.value f in
+     { runtime with funEnvironment = FunEnv.add f (formals, e) runtime.funEnvironment}
 
 and expression' runtime e =
   expression (position e) runtime (value e)
@@ -165,58 +176,74 @@ and expression position runtime = function
   | FunCall (FunId s, [e1; e2]) when is_binary_primitive s ->
     evaluation_of_binary_symbol runtime s e1 e2
 
+  (* TODO try with not_found*)
+  | FunCall (FunId id as f , args) ->
+     let formals, expr = FunEnv.find f runtime.funEnvironment in
+     let runtime = bind_args formals args runtime in
+     expression' runtime expr
 
 and binop
-: type a b. a coercion -> b wrapper -> _ -> (a -> a -> b) -> _ -> _ -> value
-= fun coerce wrap runtime op l r ->
-  let lv = expression' runtime l
-  and rv = expression' runtime r in
-  match coerce lv, coerce rv with
-    | Some li, Some ri ->
-      wrap (op li ri)
-    | _, _ ->
-      error
-        [position l; position r]
-        "Invalid binary operation."
+    : type a b. a coercion -> b wrapper -> _ -> (a -> a -> b) -> _ -> _ -> value
+	= fun coerce wrap runtime op l r ->
+	let lv = expression' runtime l
+	and rv = expression' runtime r in
+	match coerce lv, coerce rv with
+	| Some li, Some ri ->
+	   wrap (op li ri)
+	| _, _ ->
+	   error
+             [position l; position r]
+             "Invalid binary operation."
 
-and arith_binop env = binop value_as_int int_as_value env
-and arith_cmpop env = binop value_as_int bool_as_value env
+       and arith_binop env = binop value_as_int int_as_value env
+       and arith_cmpop env = binop value_as_int bool_as_value env
 
-and literal = function
-  | LInt x -> VInt x
+       and literal = function
+	 | LInt x -> VInt x
 
-and extract_observable runtime runtime' =
-  let rec substract new_environment env env' =
-    if env == env' then new_environment
-    else
-      match Environment.last env' with
-        | None -> assert false (* Absurd. *)
-        | Some (x, v, env') ->
-          let new_environment = Environment.bind new_environment x v in
-          substract new_environment env env'
-  in
-  {
-    new_environment =
-      substract Environment.initial runtime.environment runtime'.environment
-  }
+       and extract_observable runtime runtime' =
+	 let rec substract new_environment env env' =
+	   if env == env' then new_environment
+	   else
+	     match Environment.last env' with
+             | None -> assert false (* Absurd. *)
+             | Some (x, v, env') ->
+		let new_environment = Environment.bind new_environment x v in
+		substract new_environment env env'
+	 in
+	 {
+	   new_environment =
+	     substract Environment.initial runtime.environment runtime'.environment
+	 }
 
-and ifThenElse runtime c t f =
-    let expr =
-	match expression' runtime c with
-	| VBool b when b = true -> t
-	| VBool _ -> f
-	| _ as value -> failwith (print_value value ^ " is not a bool")
-    in
-    expression' runtime expr
+       and ifThenElse runtime c t f =
+	 let expr =
+	   match expression' runtime c with
+	   | VBool b when b = true -> t
+	   | VBool _ -> f
+	   | _ as value -> failwith (print_value value ^ " is not a bool")
+	 in
+	 expression' runtime expr
 
-and block_create (VInt size) init =
-    Memory.allocate memory size init
+       and block_create (VInt size) init =
+	 Memory.allocate memory size init
 
-and block_get (VLocation location) (VInt index) =
-    Memory.read (Memory.dereference memory location) index
+       and block_get (VLocation location) (VInt index) =
+	 Memory.read (Memory.dereference memory location) index
 
-and block_set (VLocation location) (VInt index) e =
-    Memory.write (Memory.dereference memory location) index e
+       and block_set (VLocation location) (VInt index) e =
+	 Memory.write (Memory.dereference memory location) index e
+
+       and bind_args formals args runtime =
+	 match formals, args with
+	 | [], [] -> runtime
+	 | _::_, [] | [], _::_ -> failwith "TODO raise mauvais arguments"
+	 | var::formals, value::args ->
+	    let value = expression' runtime value in
+	    let runtime = { runtime with
+			    environment = Environment.bind runtime.environment var value
+			  }
+       in bind_args formals args runtime
 
 let print_observable runtime observation =
   Environment.print observation.new_environment
