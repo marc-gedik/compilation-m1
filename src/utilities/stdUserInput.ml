@@ -7,7 +7,7 @@ let print_prompt () =
   flush stdout
 
 let input_char =
-  let display_prompt  = ref true in
+  let display_prompt = ref true in
   let buffer = "0" in
   let ask stdin =
     if !display_prompt then begin
