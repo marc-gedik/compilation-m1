@@ -162,12 +162,6 @@ and expression pos env = function
   | Source.AST.IfThenElse (c, t, f) ->
     failwith "Student! This is your job!"
 
-    failwith "Student! This is your job!"
-
-  | Source.AST.FunCall (Source.AST.FunId "block_set", [e1; e2; e3]) ->
-    failwith "Student! This is your job!"
-
-  (* </corrige> *)
   | Source.AST.FunCall (Source.AST.FunId f, [e1; e2])
       when is_binop f
     ->

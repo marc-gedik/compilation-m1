@@ -59,13 +59,20 @@ let interactive_loop () =
   let open Compiler in
 
   let read () =
+    initialize_prompt ();
     let b = Buffer.create 13 in
     let rec read prev =
       let c = UserInput.input_char stdin in
-      if (prev = "\n" && c = "\n") then
-        Buffer.contents b
+      if c = "\n" then
+        if prev <> "\\" then (
+          Buffer.add_string b prev;
+          Buffer.contents b
+        ) else (
+          UserInput.set_prompt "....> ";
+          read c
+        )
       else (
-        Buffer.add_string b c;
+        Buffer.add_string b prev;
         read c
       )
     in
