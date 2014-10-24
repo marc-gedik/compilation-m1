@@ -66,7 +66,12 @@ and expression = function
 and expression' e = expression (Position.value e)
 
 and funcall f es =
-  string f ++ PPrintOCaml.tuple (List.map expression' es)
+  match f, es with
+    | ("=" | "*" | "/" | "+" | "-" | "%"), [ lhs; rhs ] ->
+      group (parens (expression' lhs ++ string f ++ expression' rhs))
+    | _, _ ->
+      let ts = PPrintOCaml.tuple (List.map expression' es) in
+      string f ++ ts
 
 and literal = function
   | LInt x -> string (string_of_int x)
