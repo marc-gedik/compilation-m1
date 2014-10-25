@@ -293,7 +293,7 @@ let evaluate runtime (ast : t) =
 	 Stack.pop values;
          Memory.write (Memory.dereference memory location) index e;
 	 Stack.push DUnit values
-
+		    
       | Jump l ->
          jump l
 

@@ -141,8 +141,18 @@ and declaration env = function
   )
 
   | Source.AST.DefineFunction (f, xs, e) ->
-    failwith "Student! This is your job!"
+     let Source.AST.FunId i = Position.value f in
+     (* let env = List.fold_left (bind_variable env) xs in *)
+     let instructions = expression' env e
+			@ undef_n_times (List.length xs)
+			@ single_instruction Target.AST.Swap
+			@ single_instruction Target.AST.UJump
+     in
+     let l = Target.AST.Label i in
+     let block = label_block l instructions in
+     (env, AfterExit l, block)
 
+     
 (** [expression pos env e] compiles [e] into a block of Stacki
     instructions that *does not* start with a label. *)
 and expression pos env = function
@@ -150,43 +160,66 @@ and expression pos env = function
     single_instruction (literal l)
 
   | Source.AST.Variable (Source.AST.Id x as i) ->
-    let idx = ExtStd.List.index_of (( = ) i) env.variables in
-    single_instruction (Target.AST.GetVariable idx)
+
+     print_string x;
+     begin
+       try
+	 let idx = ExtStd.List.index_of (( = ) i) env.variables in
+	 single_instruction (Target.AST.GetVariable idx)
+       with Not_found -> failwith("error: " ^ x ^ " not found")
+     end
 
   | Source.AST.Define (x, e1, e2) ->
     let Source.AST.Id x as i = Position.value x in
     expression' env e1
     @ single_instruction (Target.AST.(Define (Id x)))
     @ expression' (bind_variable env i) e2
+    @ single_instruction (Target.AST.Undefine)
 
   | Source.AST.IfThenElse (c, t, f) ->
 
-    let t = expression pos env (Position.value t)
-    and f = expression pos env (Position.value f)
+    let t = expression' env t
+    and f = expression' env f
     in
     let label_t, block_t = labelled_block "if_true_" t
     and label_f, block_f = labelled_block "if_false_" f
+    and label_next, block_next = labelled_block "end_" (single_instruction (Target.AST.Comment "if suite"))
     in
     expression' env c
     @ (single_instruction (Target.AST.ConditionalJump (label_t, label_f)))
     @ block_t
+    @ (single_instruction (Target.AST.Jump label_next))
     @ block_f
+    @ (single_instruction (Target.AST.Jump label_next))
+    @ block_next
 
-  (* | Source.AST.FunCall (Source.AST.FunId "block_set", [e1; e2; e3]) -> *)
-  (*   failwith "Student! This is your job!" *)
+   | Source.AST.FunCall (Source.AST.FunId f, actuals) 
+     when f = "block_create" || f = "block_get" || f = "block_set" ->
+      let instructions = List.(flatten (rev_map (expression' env) actuals)) in
+      instructions 
+      @ single_instruction (Target.AST.Jump (Target.AST.Label f))
 
   (* </corrige> *)
   | Source.AST.FunCall (Source.AST.FunId f, [e1; e2])
       when is_binop f
     ->
-      expression' env e2
-    @ expression' env e1
-    @ (single_instruction (Target.AST.Binop (binop f)))
+     expression' env e2
+     @ expression' env e1 
+     @ (single_instruction (Target.AST.Binop (binop f)))
 
   | Source.AST.FunCall (Source.AST.FunId f, actuals) ->
-     let instructions = List.flatten (List.rev_map (expression' env) actuals) in
+     let instructions =
+       List.flatten
+	 (List.mapi 
+	    (fun i x -> expression' env x 
+			@ single_instruction (Target.AST.(Define(Id ("x"^(string_of_int i))))))
+	    actuals) in
+     let label_ret, block_ret = labelled_block "ret_" (single_instruction (Target.AST.Comment ("ret of " ^ f)))
+     in
      instructions 
+     @ single_instruction Target.AST.(RememberLabel label_ret)
      @ single_instruction (Target.AST.Jump (Target.AST.Label f))
+     @ block_ret
 
 
 and literal = function
@@ -244,3 +277,7 @@ and make_basic_block =
 
 and located_instruction i =
   Position.unknown_pos i
+
+and undef_n_times = function
+  | 0 -> []
+  | n -> (single_instruction Target.AST.Undefine) @ (undef_n_times (n-1))
