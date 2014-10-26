@@ -77,48 +77,97 @@ end = struct
 
   (* The following implementation is VERY naive.
      Bonus: Can you optimize it? *)
-  type 'a t = 'a list ref
+  type 'a t = {
+    mutable size : int;
+    mutable max_size : int;
+    mutable stack : 'a array
+  }
 
-  let create () = ref []
+  let create () = {
+    size = 0;
+    max_size = 0;
+    stack = [||];
+  }
 
-  let depth s = List.length !s
+  let depth s = s.size
 
+  let _get l i =
+    (* print_string "to get : "; *)
+    (* print_int (l.size -i-1); *)
+    (* print_string "\n"; *)
+    l.stack.(l.size -i-1)
+
+  let _set l i x =
+    l.stack.(l.size -i-1) <- x
+
+  let _add l i x =
+    _set l (i-1) x
+  let modif_size l x =
+    l.size <- l.size + x
+
+  let increment_size l =
+    modif_size l 1
+			
+  let decrement_size l =
+    modif_size l (-1)
+
+  let increase s x =
+    let size = if s.max_size = 0 
+	       then 
+		 begin 
+		   s.max_size <- 100;
+		   100
+		 end
+	       else begin
+		   s.max_size <- s.max_size * 2;
+		   s.max_size
+		 end
+    in
+    s.stack <- Array.(append s.stack (make size x))
+    
   let push x l =
-    l := (x :: !l)
-
+    if l.size = l.max_size then increase l x
+    else _add l 0 x;
+    increment_size l
+    		       
   exception EmptyStack
   exception UnboundStackElement of int
   exception CannotSwap
 
-  let swap l = match !l with
-    | [] | [_] -> raise CannotSwap
-    | x :: y :: xs -> l := y :: x :: xs
-
-  let pop l = match !l with
-    | [] ->
-      raise EmptyStack
-    | _ :: xs ->
-      l := xs
-
+  let swap l = 
+    if l.size < 2 then raise CannotSwap
+    else 
+      begin
+	let tmp = _get l 0 in
+	_set l 0 (_get l 1);
+	_set l 1 tmp
+      end
+    
+  let pop l = 
+    if l.size = 0 then raise EmptyStack
+    else decrement_size l
+			     
   let get k l =
-    let rec aux i = function
-      | [] -> raise (UnboundStackElement k)
-      | x :: _ when i = 0 -> x
-      | _ :: xs -> aux (pred i) xs
-    in
-    aux k !l
-
+    if k > l.size || k < 0 then raise (UnboundStackElement k)
+    else _get l k
+		   
   let sub k s =
-    let rec aux i s =
-      if i = 0 then [] else
-        match s with
-          | [] -> raise (UnboundStackElement i)
-          | x :: xs -> x :: (aux (pred i) xs)
-    in
-    ref (aux k (!s))
+    let start = s.size - k in
+    if start < 0 then raise (UnboundStackElement start)
+    else 
+      {
+	size = k;
+	max_size = k;
+	stack = (Array.sub s.stack start k)
+      }
 
   let print printer s =
-    String.concat "\n" (List.map printer !s)
+    let rec aux i =
+      if i >= 0 then
+	printer (_get s i) :: aux (i-1)
+      else []
+    in
+    String.concat "\n" (aux (s.size-1))
 
 end
 
@@ -238,6 +287,7 @@ let evaluate runtime (ast : t) =
   (** [execute_instruction implements the semantics of the
       machine instructions. *)
   and execute_instruction i =
+    Stack.print print_data values;
     match i with
       | Define x ->
         Stack.(push (x, get 0 values) variables);
