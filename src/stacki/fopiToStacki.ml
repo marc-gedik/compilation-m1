@@ -142,8 +142,8 @@ and declaration env = function
 
   | Source.AST.DefineFunction (f, xs, e) ->
      let Source.AST.FunId i = Position.value f in
-     (* let env = List.fold_left (bind_variable env) xs in *)
-     let instructions = expression' env e
+     let env' = List.fold_left bind_variable env xs in
+     let instructions = expression' env' e
 			@ undef_n_times (List.length xs)
 			@ single_instruction Target.AST.Swap
 			@ single_instruction Target.AST.UJump
