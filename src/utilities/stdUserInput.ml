@@ -8,16 +8,14 @@ let print_prompt () =
 
 let input_char =
   let display_prompt  = ref true in
-  let buffer = "0" in
   let ask stdin =
     if !display_prompt then begin
       display_prompt := false;
       print_prompt ()
     end;
     let c = input_char stdin in
-      if c = '\n' then display_prompt := true;
-      buffer.[0] <- c;
-      buffer
+    if c = '\n' then display_prompt := true;
+    String.make 1 c
   in
     ask
 

@@ -2,7 +2,7 @@ open PPrint
 open PPrintCombinators
 open PPrintEngine
 
-open FopiAST
+open FopixAST
 
 let ( ++ ) x y =
   x ^^ break 1 ^^ y
@@ -53,20 +53,27 @@ and expression = function
     ++ string "end"
   | Define (x, e1, e2) ->
     nest 2 (
-      group (string "val"
-             ++ located identifier x
-             ++ string "="
+      group (
+        group (string "val"
+               ++ located identifier x
+               ++ string "="
+        )
+        ++ group (located expression e1)
+        ++ string "in"
       )
-      ++ group (located expression e1)
     )
-    ++ string "in"
     ++ group (located expression e2)
     ++ string "end"
 
 and expression' e = expression (Position.value e)
 
 and funcall f es =
-  string f ++ PPrintOCaml.tuple (List.map expression' es)
+  match f, es with
+    | ("=" | "*" | "/" | "+" | "-" | "%"), [ lhs; rhs ] ->
+      group (parens (expression' lhs ++ string f ++ expression' rhs))
+    | _, _ ->
+      let ts = PPrintOCaml.tuple (List.map expression' es) in
+      string f ++ ts
 
 and literal = function
   | LInt x -> string (string_of_int x)

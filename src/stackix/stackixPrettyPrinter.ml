@@ -1,10 +1,10 @@
-(** This module offers a pretty-printer for Stacki programs. *)
+(** This module offers a pretty-printer for Stackix programs. *)
 
 open PPrint
 open PPrintCombinators
 open PPrintEngine
 
-open StackiAST
+open StackixAST
 
 let located f x = f (Position.value x)
 
