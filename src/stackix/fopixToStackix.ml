@@ -1,18 +1,18 @@
-(** This module implements a compiler from Fopi to Stacki. *)
+(** This module implements a compiler from Fopix to Stackix. *)
 
 let error pos msg =
   Error.error "compilation" pos msg
 
 (** As in any module that implements {!Compilers.Compiler}, the source
     language and the target language must be specified. *)
-module Source = Fopi
-module Target = Stacki
+module Source = Fopix
+module Target = Stackix
 
 (** We will need the following pieces of information to be carrying
     along the translation: *)
 type environment = {
   (** [variables] is the list of variables that are defined at the point
-      of the Fopi program we are. The variables are stored in reverse order
+      of the Fopix program we are. The variables are stored in reverse order
       of their definitions. (The latest variable goes first.) *)
   variables        : Source.AST.identifier list;
 
@@ -65,7 +65,7 @@ type declaration_location =
   (** ... or after exit (because it is executed only on demand). *)
   | AfterExit of Target.AST.label
 
-(** [translate p env] turns a Fopi program [p] into a Stacki program
+(** [translate p env] turns a Fopix program [p] into a Stackix program
     using [env] to retrieve contextual information. *)
 let rec translate p env =
 
@@ -143,7 +143,7 @@ and declaration env = function
   | Source.AST.DefineFunction (f, xs, e) ->
     failwith "Student! This is your job!"
 
-(** [expression pos env e] compiles [e] into a block of Stacki
+(** [expression pos env e] compiles [e] into a block of Stackix
     instructions that *does not* start with a label. *)
 and expression pos env = function
   | Source.AST.Literal l ->
@@ -158,6 +158,7 @@ and expression pos env = function
     expression' env e1
     @ single_instruction (Target.AST.(Define (Id x)))
     @ expression' (bind_variable env i) e2
+    @ single_instruction Target.AST.Undefine
 
   | Source.AST.IfThenElse (c, t, f) ->
     failwith "Student! This is your job!"

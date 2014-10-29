@@ -28,8 +28,9 @@ and initialize_options () =
   CommandLineOptions.parse ()
 
 and initialize_languages () =
-  FopiInitialization.initialize ();
-  StackiInitialization.initialize ()
+  DatixInitialization.initialize ();
+  FopixInitialization.initialize ();
+  StackixInitialization.initialize ()
 
 let get_compiler () =
   let source_language =
@@ -88,21 +89,22 @@ let interactive_loop () =
   in
 
   let rec step
-    : Target.runtime -> Compiler.environment
-    -> Target.runtime * Compiler.environment =
-    fun runtime cenvironment ->
+    : Target.runtime -> Compiler.environment -> Source.typing_environment
+    -> Target.runtime * Compiler.environment * Source.typing_environment =
+    fun runtime cenvironment tenvironment ->
       try
         match read () with
           | "+debug" ->
             Options.set_verbose_mode true;
-            step runtime cenvironment
+            step runtime cenvironment tenvironment
 
           | "-debug" ->
             Options.set_verbose_mode false;
-            step runtime cenvironment
+            step runtime cenvironment tenvironment
 
           | input ->
             let ast = Compiler.Source.parse_string input in
+            let tenvironment = Compiler.Source.typecheck tenvironment ast in
             let cast, cenvironment = Compiler.translate ast cenvironment in
             if Options.get_verbose_mode () then
               print_endline (Target.print_ast cast);
@@ -110,19 +112,23 @@ let interactive_loop () =
               eval runtime (fun r -> evaluate r cast) print_observable
             )
             in
-            step runtime cenvironment
+            step runtime cenvironment tenvironment
       with
         | Error.Error (positions, msg) ->
           output_string stdout (Error.print_error positions msg);
-          step runtime cenvironment
+          step runtime cenvironment tenvironment
         | End_of_file ->
-          (runtime, cenvironment)
+          (runtime, cenvironment, tenvironment)
         | e ->
           print_endline (Printexc.to_string e);
-          step runtime cenvironment
+          step runtime cenvironment tenvironment
   in
   Error.resume_on_error ();
-  ignore (step (Target.initial_runtime ()) (Compiler.initial_environment ()))
+  ignore (step
+            (Target.initial_runtime ())
+            (Compiler.initial_environment ())
+            (Source.initial_typing_environment ())
+  )
 
 (** ------------- **)
 (**   Batch mode   *)
@@ -146,11 +152,14 @@ let batch_compilation () =
   let input_filename = Options.get_input_filename () in
   let module_name = Filename.chop_extension input_filename in
   let ast = Source.parse_filename input_filename in
+  ignore (Compiler.Source.(typecheck (initial_typing_environment ()) ast));
   let cast, _ = Compiler.(translate ast (initial_environment ())) in
   let output_filename = module_name ^ Target.extension in
-  let cout = open_out output_filename in
-  output_string cout (Target.print_ast cast);
-  close_out cout;
+  if not (Options.get_dry_mode ()) then (
+    let cout = open_out output_filename in
+    output_string cout (Target.print_ast cast);
+    close_out cout;
+  );
   if Options.get_running_mode () then Compiler.Target.(
     ignore (
       eval (initial_runtime ()) (fun r -> evaluate r cast) print_observable

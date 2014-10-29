@@ -1,6 +1,6 @@
 %{
 
-  open FopiAST
+  open FopixAST
 
 %}
 
@@ -17,7 +17,7 @@
 %left STAR SLASH
 %nonassoc LBRACKET
 
-%start<FopiAST.t> program
+%start<FopixAST.t> program
 
 %%
 

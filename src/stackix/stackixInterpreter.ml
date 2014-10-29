@@ -1,23 +1,23 @@
-(** This module implements the interpreter of the Stacki programming
+(** This module implements the interpreter of the Stackix programming
     language. *)
 
 open Error
-open StackiAST
+open StackixAST
 
 let error msg =
-  global_error "stacki execution" msg
+  global_error "stackix execution" msg
 
 (**
 
-   The Stacki programming language is a low-level programming language
+   The Stackix programming language is a low-level programming language
    for a stack machine composed of two stacks.
 
    The first stack contains intermediate values (see {!data}).
 
    The second stack contains the values of variables.
 
-   A program for the Stacki machine is a linear sequence of labelled
-   instructions (see {!StackiAST.t}). Therefore, the machine must:
+   A program for the Stackix machine is a linear sequence of labelled
+   instructions (see {!StackixAST.t}). Therefore, the machine must:
 
    (i) decode and execute the instruction in the right order ;
        (see {!execute_instruction})
@@ -118,7 +118,9 @@ end = struct
     ref (aux k (!s))
 
   let print printer s =
-    String.concat "\n" (List.map printer !s)
+    String.concat "\n" (
+      List.(rev (filter (fun s -> s <> "") (map printer !s)))
+    )
 
 end
 
@@ -330,4 +332,11 @@ let evaluate runtime (ast : t) =
   (runtime, observable)
 
 let print_observable runtime obs =
-  Stack.print (fun (Id x, v) -> x ^ " = " ^ print_data v) obs.new_variables
+  Stack.print (fun (Id x, v) ->
+    (* Identifier starting with '_' are reserved by the compiler.
+       So their values are hidden to the user. *)
+    if x.[0] = '_' then
+      ""
+    else
+      x ^ " = " ^ print_data v
+  ) obs.new_variables

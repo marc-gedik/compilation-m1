@@ -1,10 +1,4 @@
-(** The abstract syntax tree for fopy programs. *)
-
-
-
-
-
-
+(** The abstract syntax tree for fopix programs. *)
 
 open Position
 

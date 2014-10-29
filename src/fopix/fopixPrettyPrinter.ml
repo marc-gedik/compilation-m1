@@ -2,7 +2,7 @@ open PPrint
 open PPrintCombinators
 open PPrintEngine
 
-open FopiAST
+open FopixAST
 
 let ( ++ ) x y =
   x ^^ break 1 ^^ y
@@ -53,13 +53,15 @@ and expression = function
     ++ string "end"
   | Define (x, e1, e2) ->
     nest 2 (
-      group (string "val"
-             ++ located identifier x
-             ++ string "="
+      group (
+        group (string "val"
+               ++ located identifier x
+               ++ string "="
+        )
+        ++ group (located expression e1)
+        ++ string "in"
       )
-      ++ group (located expression e1)
     )
-    ++ string "in"
     ++ group (located expression e2)
     ++ string "end"
 

@@ -42,7 +42,12 @@ let generic_options = Arg.(align (List.flatten [
   options
     ["--verbose"; "-V"]
     (Bool Options.set_verbose_mode)
-    (" Ask the compiler to be verbose")
+    (" Ask the compiler to be verbose");
+
+  options
+    ["--dry"; "-d"]
+    (Bool Options.set_dry_mode)
+    (" Ask the compiler not to produce compiled file")
 
 ]))
 

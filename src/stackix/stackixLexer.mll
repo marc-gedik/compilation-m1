@@ -2,7 +2,7 @@
   open Lexing
   open Error
   open Position
-  open StackiParser
+  open StackixParser
 
   let next_line_and f lexbuf  =
     Lexing.new_line lexbuf;
@@ -19,9 +19,9 @@ let blank   = [' ' '\009' '\012']
 
 let digit = ['0'-'9']
 
-let lowercase_alpha = ['a'-'z']
+let lowercase_alpha = ['a'-'z' '_']
 
-let uppercase_alpha = ['A'-'Z']
+let uppercase_alpha = ['A'-'Z' '_']
 
 let alpha = lowercase_alpha | uppercase_alpha
 
@@ -36,20 +36,29 @@ rule token = parse
   | ";;" ([^'\n']* as c) { COMMENT c }
 
   (** Keywords *)
-  | "add"           { ADD }
-  | "mul"           { MUL }
-  | "div"           { DIV }
-  | "sub"           { SUB }
-  | "gt"            { GT  }
-  | "gte"           { GTE }
-  | "lt"            { LT  }
-  | "lte"           { LTE }
-  | "eq"            { EQ }
-  | "remember"      { REMEMBER }
-  | "define"        { DEFINE }
-  | "undefine"      { UNDEFINE }
-  | "exit"          { EXIT }
-  | identifier as i { ID i }
+  | "add"              { ADD }
+  | "mul"              { MUL }
+  | "div"              { DIV }
+  | "sub"              { SUB }
+  | "gt"               { GT  }
+  | "gte"              { GTE }
+  | "lt"               { LT  }
+  | "lte"              { LTE }
+  | "eq"               { EQ }
+  | "swap"             { SWAP }
+  | "conditional_jump" { CJUMP }
+  | "jump"             { JUMP }
+  | "ujump"            { UJUMP }
+  | "or"               { OR }
+  | "remember"         { REMEMBER }
+  | "define"           { DEFINE }
+  | "undefine"         { UNDEFINE }
+  | "getvariable"      { GETVARIABLE }
+  | "exit"             { EXIT }
+  | "block_create"     { BLOCKCREATE }
+  | "block_get"        { BLOCKGET }
+  | "block_set"        { BLOCKSET }
+  | identifier as i    { ID i }
 
   (** Literals *)
   | digit+ as d     { INT (int_of_string d) }
