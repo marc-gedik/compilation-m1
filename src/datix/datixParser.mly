@@ -46,7 +46,7 @@ definition: VAL x=located(pattern) EQUAL e=located(expression)
 }
 | EVAL e=located(expression)
 {
-  DefineValue (Position.map (fun _ -> PWildcard) e, e)
+  DefineValue (Position.map (fun _ -> PVariable (Id "res")) e, e)
 }
 | TYPE t=type_identifier EQUAL td=type_definition
 {

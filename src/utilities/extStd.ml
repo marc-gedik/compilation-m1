@@ -14,4 +14,14 @@ module List = struct
       in
       aux 0 l
 
+   (** [all_distinct ls] returns true if all the elements of [ls]
+       are distinct. *)
+  let all_distinct ls =
+    let ls = List.sort compare ls in
+    let rec aux = function
+      | [] | [_] -> true
+      | x :: y :: ys -> x <> y && aux (y :: ys)
+    in
+    aux ls
+
 end
