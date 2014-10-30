@@ -1,6 +1,6 @@
 open Position
 open Error
-open FopiAST
+open FopixAST
 
 (** [error pos msg] reports runtime error messages. *)
 let error positions msg =
@@ -60,10 +60,17 @@ end = struct
     | (x, v) :: e -> Some (x, v, e)
 
   let print_binding (Id x, v) =
-    x ^ " = " ^ print_value v
+    (* Identifiers starting with '_' are reserved for the compiler.
+       Their values must not be observable by users. *)
+    if x.[0] = '_' then
+      ""
+    else
+      x ^ " = " ^ print_value v
 
   let print env =
-    String.concat "\n" (List.map print_binding env)
+    String.concat "\n" (
+      List.(filter (fun s -> s <> "") (map print_binding env))
+    )
 
 end
 

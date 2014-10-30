@@ -1,23 +1,23 @@
-(** This module implements the interpreter of the Stacki programming
+(** This module implements the interpreter of the Stackix programming
     language. *)
 
 open Error
-open StackiAST
+open StackixAST
 
 let error msg =
-  global_error "stacki execution" msg
+  global_error "stackix execution" msg
 
 (**
 
-   The Stacki programming language is a low-level programming language
+   The Stackix programming language is a low-level programming language
    for a stack machine composed of two stacks.
 
    The first stack contains intermediate values (see {!data}).
 
    The second stack contains the values of variables.
 
-   A program for the Stacki machine is a linear sequence of labelled
-   instructions (see {!StackiAST.t}). Therefore, the machine must:
+   A program for the Stackix machine is a linear sequence of labelled
+   instructions (see {!StackixAST.t}). Therefore, the machine must:
 
    (i) decode and execute the instruction in the right order ;
        (see {!execute_instruction})
@@ -142,15 +142,15 @@ end = struct
 	_set l 0 (_get l 1);
 	_set l 1 tmp
       end
-    
+
   let pop l = 
     if l.size = 0 then raise EmptyStack
     else decrement_size l
-			     
+
   let get k l =
     if k > l.size || k < 0 then raise (UnboundStackElement k)
     else _get l k
-		   
+
   let sub k s =
     let start = s.size - k in
     if start < 0 then raise (UnboundStackElement start)
@@ -162,6 +162,7 @@ end = struct
       }
 
   let print printer s =
+
     let rec aux i =
       if i >= 0 then
 	printer (_get s i) :: aux (i-1)
@@ -229,7 +230,7 @@ let initial_runtime () = {
 }
 
 let show_runtime runtime =
-  Printf.printf "=== Values ===\n%s=== Variables ===\n%s\n"
+  Printf.printf "=== Values ===\n%s\n=== Variables ===\n%s\n"
     (Stack.print print_data runtime.values)
     (Stack.print (fun (Id x, d) -> x ^ " = " ^ print_data d) runtime.variables)
 
@@ -319,22 +320,22 @@ let evaluate runtime (ast : t) =
       | Exit ->
         raise ExitNow
 
-      | Jump (Label "block_create") ->                                        
-         let DInt size = Stack.get 0 values in                                      
-         let init = Stack.get 1 values in                                      
-         Stack.pop values;                                                     
-         Stack.pop values;                                                     
+      | Jump (Label "block_create") ->
+         let DInt size = Stack.get 0 values in
+         let init = Stack.get 1 values in
+         Stack.pop values;
+         Stack.pop values;
          Stack.push (DLocation (Memory.allocate memory size init)) values
-  
-           
+
+
       | Jump (Label "block_get") ->
          let DLocation location = Stack.get 0 values in
 	 let DInt index = Stack.get 1 values in 
 	 Stack.pop values;
 	 Stack.pop values;
 	 Stack.push (Memory.read (Memory.dereference memory location) index) values
-                  
-      | Jump (Label "block_set") ->    
+
+      | Jump (Label "block_set") ->
          let DLocation location = Stack.get 0 values in
 	 let DInt index = Stack.get 1 values in 
 	 let e = Stack.get 2 values in 
@@ -343,7 +344,7 @@ let evaluate runtime (ast : t) =
 	 Stack.pop values;
          Memory.write (Memory.dereference memory location) index e;
 	 Stack.push DUnit values
-		    
+
       | Jump l ->
          jump l
 
@@ -374,8 +375,8 @@ let evaluate runtime (ast : t) =
     | Div -> arith_binop ( / )
     | Sub -> arith_binop ( - )
     | EQ  -> cmp_binop (  =  )
-    | GT  -> cmp_binop (  <  )
-    | GTE -> cmp_binop (  <= )
+    | GT  -> cmp_binop (  >  )
+    | GTE -> cmp_binop (  >= )
     | LT  -> cmp_binop (  <  )
     | LTE -> cmp_binop (  <= )
 
@@ -405,4 +406,11 @@ let evaluate runtime (ast : t) =
   (runtime, observable)
 
 let print_observable runtime obs =
-  Stack.print (fun (Id x, v) -> x ^ " = " ^ print_data v) obs.new_variables
+  Stack.print (fun (Id x, v) ->
+    (* Identifier starting with '_' are reserved by the compiler.
+       So their values are hidden to the user. *)
+    if x.[0] = '_' then
+      ""
+    else
+      x ^ " = " ^ print_data v
+  ) obs.new_variables

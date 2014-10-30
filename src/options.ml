@@ -35,8 +35,20 @@ let set_interactive_mode = function
   | true -> set_mode Interactive
   | false -> set_mode Batch
 
+let running_mode = ref false
+
+let get_running_mode () = !running_mode
+
+let set_running_mode = ( := ) running_mode
+
 let verbose_mode = ref false
 
 let get_verbose_mode () = !verbose_mode
 
 let set_verbose_mode = ( := ) verbose_mode
+
+let dry_mode = ref false
+
+let get_dry_mode () = !dry_mode
+
+let set_dry_mode = ( := ) dry_mode

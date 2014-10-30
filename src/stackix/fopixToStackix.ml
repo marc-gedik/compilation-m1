@@ -1,18 +1,18 @@
-(** This module implements a compiler from Fopi to Stacki. *)
+(** This module implements a compiler from Fopix to Stackix. *)
 
 let error pos msg =
   Error.error "compilation" pos msg
 
 (** As in any module that implements {!Compilers.Compiler}, the source
     language and the target language must be specified. *)
-module Source = Fopi
-module Target = Stacki
+module Source = Fopix
+module Target = Stackix
 
 (** We will need the following pieces of information to be carrying
     along the translation: *)
 type environment = {
   (** [variables] is the list of variables that are defined at the point
-      of the Fopi program we are. The variables are stored in reverse order
+      of the Fopix program we are. The variables are stored in reverse order
       of their definitions. (The latest variable goes first.) *)
   variables        : Source.AST.identifier list;
 
@@ -61,11 +61,11 @@ let push_context code context =
 (** The code of a declaration can be located...*)
 type declaration_location =
   (** ... either before exit (because it must be executed). *)
-  | BeforeExit of Target.AST.label
+| BeforeExit of Target.AST.label
   (** ... or after exit (because it is executed only on demand). *)
-  | AfterExit of Target.AST.label
+| AfterExit of Target.AST.label
 
-(** [translate p env] turns a Fopi program [p] into a Stacki program
+(** [translate p env] turns a Fopix program [p] into a Stackix program
     using [env] to retrieve contextual information. *)
 let rec translate p env =
 
@@ -96,23 +96,23 @@ let rec translate p env =
           a location to put the block. *)
       let env, location, block = declaration env d in
       match location with
-        | BeforeExit l ->
+      | BeforeExit l ->
           (** The block must be put right now. So, we compute the compiled
               code for the remaining declarations. *)
-          let l', blocks, env = iter env after_exit ds in
+        let l', blocks, env = iter env after_exit ds in
           (** Then, we connect the block with the compiled code for the
               remaining declarations. *)
-          let blocks =
-            (block @ single_instruction (Target.AST.Jump l'))
-            :: blocks
-          in
-          (l, blocks, env)
+        let blocks =
+          (block @ single_instruction (Target.AST.Jump l'))
+          :: blocks
+        in
+        (l, blocks, env)
 
-        | AfterExit l ->
+      | AfterExit l ->
           (** The block must be put after the exit program point. We
               simply accumulate it in [after_exit]. *)
-          let after_exit = block :: after_exit in
-          iter env after_exit ds
+        let after_exit = block :: after_exit in
+        iter env after_exit ds
   in
   let _, blocks, env = iter env [] p in
   (List.flatten blocks, env)
@@ -124,20 +124,20 @@ and bind_variable env x =
 and declaration env = function
   | Source.AST.DefineValue (x, e) -> Target.AST.(
     (** To compile a value definition, we: *)
-    let (Source.AST.Id i) as x = Position.value x in
+					   let (Source.AST.Id i) as x = Position.value x in
 
-    let instructions =
+					   let instructions =
       (** 1. Insert the compiled code for the expression [e]. *)
-      expression' env e
+					     expression' env e
       (** 2. Insert an instruction to ask the machine to define the
           variable [x]. *)
-      @ (single_instruction (Define (Id i)))
-    in
+					     @ (single_instruction (Define (Id i)))
+					   in
     (** 3. We insert a label at the beginning of the block. *)
-    let l, block = labelled_block i instructions in
+					   let l, block = labelled_block i instructions in
     (** The variable is inserted in the environment. *)
-    let env = bind_variable env x in
-    (env, BeforeExit l, block)
+					   let env = bind_variable env x in
+					   (env, BeforeExit l, block)
   )
 
   | Source.AST.DefineFunction (f, xs, e) ->
@@ -152,7 +152,6 @@ and declaration env = function
      let block = label_block l instructions in
      (env, AfterExit l, block)
 
-     
 (** [expression pos env e] compiles [e] into a block of Stacki
     instructions that *does not* start with a label. *)
 and expression pos env = function
@@ -161,13 +160,13 @@ and expression pos env = function
 
   | Source.AST.Variable (Source.AST.Id x as i) ->
 
-     print_string x;
-     begin
-       try
-	 let idx = ExtStd.List.index_of (( = ) i) env.variables in
-	 single_instruction (Target.AST.GetVariable idx)
-       with Not_found -> failwith("error: " ^ x ^ " not found")
-     end
+    print_string x;
+    begin
+      try
+	let idx = ExtStd.List.index_of (( = ) i) env.variables in
+	single_instruction (Target.AST.GetVariable idx)
+      with Not_found -> failwith("error: " ^ x ^ " not found")
+    end
 
   | Source.AST.Define (x, e1, e2) ->
     let Source.AST.Id x as i = Position.value x in
@@ -193,33 +192,33 @@ and expression pos env = function
     @ (single_instruction (Target.AST.Jump label_next))
     @ block_next
 
-   | Source.AST.FunCall (Source.AST.FunId f, actuals) 
-     when f = "block_create" || f = "block_get" || f = "block_set" ->
-      let instructions = List.(flatten (rev_map (expression' env) actuals)) in
-      instructions 
-      @ single_instruction (Target.AST.Jump (Target.AST.Label f))
+  | Source.AST.FunCall (Source.AST.FunId f, actuals) 
+      when f = "block_create" || f = "block_get" || f = "block_set" ->
+    let instructions = List.(flatten (rev_map (expression' env) actuals)) in
+    instructions 
+    @ single_instruction (Target.AST.Jump (Target.AST.Label f))
 
   (* </corrige> *)
   | Source.AST.FunCall (Source.AST.FunId f, [e1; e2])
       when is_binop f
-    ->
-     expression' env e2
-     @ expression' env e1 
-     @ (single_instruction (Target.AST.Binop (binop f)))
+	->
+    expression' env e2
+    @ expression' env e1 
+    @ (single_instruction (Target.AST.Binop (binop f)))
 
   | Source.AST.FunCall (Source.AST.FunId f, actuals) ->
-     let instructions =
-       List.flatten
-	 (List.mapi 
-	    (fun i x -> expression' env x 
-			@ single_instruction (Target.AST.(Define(Id ("x"^(string_of_int i))))))
-	    actuals) in
-     let label_ret, block_ret = labelled_block "ret_" (single_instruction (Target.AST.Comment ("ret of " ^ f)))
-     in
-     instructions 
-     @ single_instruction Target.AST.(RememberLabel label_ret)
-     @ single_instruction (Target.AST.Jump (Target.AST.Label f))
-     @ block_ret
+    let instructions =
+      List.flatten
+	(List.mapi 
+	   (fun i x -> expression' env x 
+	     @ single_instruction (Target.AST.(Define(Id ("x"^(string_of_int i))))))
+	   actuals) in
+    let label_ret, block_ret = labelled_block "ret_" (single_instruction (Target.AST.Comment ("ret of " ^ f)))
+    in
+    instructions 
+    @ single_instruction Target.AST.(RememberLabel label_ret)
+    @ single_instruction (Target.AST.Jump (Target.AST.Label f))
+    @ block_ret
 
 
 and literal = function
@@ -251,19 +250,19 @@ and label_of_block = function
 and label_block l =
   fun instructions ->
     match instructions with
-      | [] -> assert false (* By previous precondition. *)
-      | (Some l, _) :: _ -> assert false (* By precondition. *)
-      | (None, i) :: is -> (Some l, i) :: is
+    | [] -> assert false (* By previous precondition. *)
+    | (Some l, _) :: _ -> assert false (* By precondition. *)
+    | (None, i) :: is -> (Some l, i) :: is
 
 and labelled_block =
   let c = ref 0 in
   fun prefix instructions ->
     match label_of_block instructions with
-      | None ->
-        let l = incr c; Target.AST.Label (prefix ^ string_of_int !c) in
-        (l, label_block l instructions)
-      | Some l ->
-        (l, instructions)
+    | None ->
+      let l = incr c; Target.AST.Label (prefix ^ string_of_int !c) in
+      (l, label_block l instructions)
+    | Some l ->
+      (l, instructions)
 
 and single_instruction i =
   [(None, located_instruction i)]

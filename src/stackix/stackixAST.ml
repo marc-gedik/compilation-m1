@@ -1,4 +1,4 @@
-(** The abstract syntax tree for fopy programs. *)
+(** The abstract syntax tree for stackix programs. *)
 
 open Position
 
@@ -20,6 +20,9 @@ and instruction =
   | ConditionalJump of label * label
   | Exit
   | Comment of string
+  | BlockCreate
+  | BlockGet
+  | BlockSet
 
 and binop = Add | Mul | Div | Sub | GT | LT | GTE | LTE | EQ
 

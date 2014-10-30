@@ -2,7 +2,7 @@
   open Lexing
   open Error
   open Position
-  open FopiParser
+  open FopixParser
 
   let next_line_and f lexbuf  =
     Lexing.new_line lexbuf;
@@ -19,9 +19,9 @@ let blank   = [' ' '\009' '\012']
 
 let digit = ['0'-'9']
 
-let lowercase_alpha = ['a'-'z']
+let lowercase_alpha = ['a'-'z' '_']
 
-let uppercase_alpha = ['A'-'Z']
+let uppercase_alpha = ['A'-'Z' '_']
 
 let alpha = lowercase_alpha | uppercase_alpha
 

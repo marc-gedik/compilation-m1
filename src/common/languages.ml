@@ -21,6 +21,8 @@ module type Language = sig
       form. *)
   val print_ast : ast -> string
 
+  (** {2 Semantic} *)
+
   (** A runtime environment contains all the information necessary
       to evaluate a program. *)
   type runtime
@@ -40,6 +42,14 @@ module type Language = sig
   (** [print_observable o] returns a human-readable
       representation of an observable. *)
   val print_observable : runtime -> observable -> string
+
+  (** {3 Static semantic} *)
+
+  type typing_environment
+
+  val initial_typing_environment : unit -> typing_environment
+
+  val typecheck : typing_environment -> ast -> typing_environment
 
 end
 
