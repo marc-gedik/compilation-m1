@@ -178,7 +178,7 @@ type typing_environment = TypingEnvironment.t
 
 (** The initial environment contains the type of the primitive functions. *)
 let initial_typing_environment () =
-     failwith "Student! This is your job!"
+  TypingEnvironment.empty
 
 (** [typecheck tenv ast] checks that [ast] is a well-formed program
     under the typing environment [tenv]. *)
@@ -193,7 +193,12 @@ let typecheck tenv ast =
       define_value tenv p e
 
     | DefineFunction (f, xs, _, e) ->
-         failwith "Student! This is your job!"
+       let typs = snd (List.split xs) in
+       let xsId, xsTyp = List.split xs in
+       let tenv' = List.fold_left2 check_variable tenv xsTyp xsId in
+       let ret = infer_expression_type tenv' e in
+       let signature = Signature (typs,ret) in
+       TypingEnvironment.bind_function tenv (Position.value f) signature
 
     | DefineType (t, tdef) ->
       TypingEnvironment.bind_type_definition tenv t tdef
@@ -225,29 +230,33 @@ let typecheck tenv ast =
         let tenv = define_value tenv p e1 in
         infer_expression_type tenv e2
 
-      | FunCall (f, es) ->
-           failwith "Student! This is your job!"
+      (* TODO funcall binop *)
+      | FunCall (FunId id as f, es) ->
+	 let Signature (l, typ) = TypingEnvironment.lookup_function tenv f in
+	 (* TODO tester type des arguments *)
+	 typ
 
       | IfThenElse (c, te, fe) ->
-           failwith "Student! This is your job!"
+           failwith "11Student! This is your job!"
 
       | Tuple es ->
-        failwith "Student! This is your job!"
+	 let typs = List.map (infer_expression_type tenv) es in
+	 TyTuple typs
 
       | Record [] ->
         assert false (* By parsing. *)
 
       | Record fs ->
-        failwith "Student! This is your job!"
+	 failwith "13Student! This is your job!"
 
       | RecordField (e, (Label lid as l)) ->
-        failwith "Student! This is your job!"
+        failwith "14Student! This is your job!"
 
       | TaggedValues (k, es) ->
-        failwith "Student! This is your job!"
+        failwith "15Student! This is your job!"
 
       | Case (e, bs) ->
-        failwith "Student! This is your job!"
+        failwith "16Student! This is your job!"
 
   (** [infer_branches tenv pty previous_branch_type (Branch (p, e))]
       checks that the pattern [p] has type [pty] and that the type of
@@ -260,7 +269,7 @@ let typecheck tenv ast =
         | Some ty -> ty
       end
     | Branch (pat, e) :: bs ->
-         failwith "Student! This is your job!"
+         failwith "17Student! This is your job!"
 
   (** [check_pattern tenv pty pat] checks that [pat] can be assigned
       the type [pty] and, if so, returns an extension of [tenv] with
@@ -268,16 +277,17 @@ let typecheck tenv ast =
   and check_pattern tenv pty pat =
     match Position.value pat, pty with
       | PVariable x, _ ->
-           failwith "Student! This is your job!"
+	 check_variable tenv pty x
 
       | PTuple xs, TyTuple tys ->
-           failwith "Student! This is your job!"
+	 check_same_length (Position.position pat) xs tys;
+	 List.fold_left2 check_variable tenv tys xs
 
       | PWildcard, _ ->
-           failwith "Student! This is your job!"
+	 tenv
 
       | PTaggedValues (k, xs), TyIdentifier t ->
-           failwith "Student! This is your job!"
+         failwith "21Student! This is your job!"
 
       | _, _ ->
         error (Position.position pat) (

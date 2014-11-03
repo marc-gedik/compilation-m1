@@ -74,7 +74,7 @@ end = struct
 
 end
 
-module FunEnv = 
+module FunEnv =
   Map.Make(
       struct
 	type t = function_identifier
@@ -99,7 +99,14 @@ let initial_runtime () = {
 (** 640k ought to be enough for anybody -- B.G. *)
 let memory : value Memory.t = Memory.create (640 * 1024)
 
+let bind_functions runtime = function
+  | DefineFunction (f, formals, e) ->
+     let f = Position.value f in
+     { runtime with funEnvironment = FunEnv.add f (formals, e) runtime.funEnvironment}
+  | _ -> runtime
+
 let rec evaluate runtime ast =
+  let runtime = List.fold_left bind_functions runtime ast in
   let runtime' = List.fold_left declaration runtime ast in
   (runtime', extract_observable runtime runtime')
 
@@ -110,8 +117,7 @@ and declaration runtime = function
     let i = Position.value i in
     { runtime with environment = Environment.bind runtime.environment i v }
   | DefineFunction (f, formals, e) ->
-     let f = Position.value f in
-     { runtime with funEnvironment = FunEnv.add f (formals, e) runtime.funEnvironment}
+     runtime
 
 and expression' runtime e =
   expression (position e) runtime (value e)
@@ -183,12 +189,14 @@ and expression position runtime = function
   | FunCall (FunId s, [e1; e2]) when is_binary_primitive s ->
     evaluation_of_binary_symbol runtime s e1 e2
 
-  (* TODO try with not_found*)
   | FunCall (FunId id as f , args) ->
-     let formals, expr = FunEnv.find f runtime.funEnvironment in
-     let runtime = bind_args formals args runtime in
-     expression' runtime expr
-
+     (try
+	 let formals, expr = FunEnv.find f runtime.funEnvironment in
+	 let runtime = bind_args formals args runtime in
+	 expression' runtime expr
+       with Not_found ->
+	 raise (error [position] (Printf.sprintf "Unbound Function Identifier %s" id))
+     )
 and binop
     : type a b. a coercion -> b wrapper -> _ -> (a -> a -> b) -> _ -> _ -> value
 	= fun coerce wrap runtime op l r ->
