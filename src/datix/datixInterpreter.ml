@@ -199,7 +199,8 @@ and expression position runtime = function
      )
 
   | IfThenElse (c, t, f) ->
-     failwith "4Student! This is your job!"
+     ifThenElse runtime c t f
+
 
 
 and branches runtime v = function
@@ -279,6 +280,15 @@ and binop
 	   new_environment =
 	     substract Environment.initial runtime.environment runtime'.environment
 	 }
+
+       and ifThenElse runtime c t f =
+	 let expr =
+	   match expression' runtime c with
+	   | VBool b when b = true -> t
+	   | VBool _ -> f
+	   | _ as value -> failwith (print_value value ^ " is not a bool")
+	 in
+	 expression' runtime expr
 
 let print_observable runtime observation =
   Environment.print observation.new_environment

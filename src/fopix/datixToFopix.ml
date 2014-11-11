@@ -58,10 +58,13 @@ let translate (p : S.t) env =
 
   and definition env = function
     | S.DefineValue (pat, e) ->
-         failwith "Student! This is your job!"
+       failwith "Student! This is your job!"
 
     | S.DefineFunction (f, xs, _, e) ->
-         failwith "Student! This is your job!"
+       let f  = function_identifier' f in
+       let xs = formals xs in
+       let e  = expression' env e in
+       [T.DefineFunction (f, xs, e)]
 
     | S.DefineType (t, tdef) ->
       []
@@ -71,19 +74,23 @@ let translate (p : S.t) env =
     let locate = Position.with_pos pos in
     match e with
       | S.Literal l ->
-           failwith "Student! This is your job!"
+	 T.Literal (literal l)
 
-      | S.Variable x ->
-           failwith "Student! This is your job!"
+      | S.Variable (S.Id x) ->
+	 T.(Variable (Id x))
 
       | S.Define (pat, e1, e2) ->
            failwith "Student! This is your job!"
 
-      | S.FunCall (f, es) ->
-           failwith "Student! This is your job!"
+      | S.FunCall (S.FunId f, es) ->
+	 let es = List.map (expression' env) es in
+         T.FunCall (T.FunId f, es)
 
       | S.IfThenElse (c, et, ef) ->
-           failwith "Student! This is your job!"
+         let c  = expression' env c  in
+	 let et = expression' env et in
+	 let ef = expression' env ef in
+	 T.IfThenElse (c, et, ef)
 
       | S.Tuple es ->
            failwith "Student! This is your job!"

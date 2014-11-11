@@ -179,6 +179,7 @@ type typing_environment = TypingEnvironment.t
 (** The initial environment contains the type of the primitive functions. *)
 let initial_typing_environment () =
   TypingEnvironment.empty
+(* TODO Ajouter les taggedUnion ?*)
 
 (** [typecheck tenv ast] checks that [ast] is a well-formed program
     under the typing environment [tenv]. *)
@@ -237,7 +238,18 @@ let typecheck tenv ast =
 	 typ
 
       | IfThenElse (c, te, fe) ->
-           failwith "11Student! This is your job!"
+	 let c = infer_expression_type tenv c in
+	 if c  = tybool
+	 then
+	   begin
+	     let te = infer_expression_type tenv te in
+	     let fe = infer_expression_type tenv fe in
+	     if te = fe
+	     then te
+	     else failwith "Todo raise pas meme type"
+           end
+	 else
+	   failwith "Todo raise condition pas un bool"
 
       | Tuple es ->
 	 let typs = List.map (infer_expression_type tenv) es in
@@ -250,10 +262,10 @@ let typecheck tenv ast =
 	 failwith "13Student! This is your job!"
 
       | RecordField (e, (Label lid as l)) ->
-        failwith "14Student! This is your job!"
+         failwith "14Student! This is your job!"
 
       | TaggedValues (k, es) ->
-        failwith "15Student! This is your job!"
+         failwith "15Student! This is your job!"
 
       | Case (e, bs) ->
         failwith "16Student! This is your job!"
@@ -269,7 +281,7 @@ let typecheck tenv ast =
         | Some ty -> ty
       end
     | Branch (pat, e) :: bs ->
-         failwith "17Student! This is your job!"
+       failwith "17Student! This is your job!"
 
   (** [check_pattern tenv pty pat] checks that [pat] can be assigned
       the type [pty] and, if so, returns an extension of [tenv] with
