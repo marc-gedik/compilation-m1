@@ -206,15 +206,11 @@ typ:
 {
   TyIdentifier x
 }
-| lhs=typ STAR rhs=typ
-{
-  match rhs with
-    | TyTuple ts -> TyTuple (lhs :: ts)
-    | _ -> TyTuple [lhs; rhs]
-}
-| LPAREN t=typ RPAREN
-{
-  t
+| LPAREN ts=separated_nonempty_list(STAR, typ) RPAREN {
+  match ts with
+    | [] -> assert false
+    | [t] -> t
+    | ts -> TyTuple ts
 }
 
 type_identifier: x=ID
