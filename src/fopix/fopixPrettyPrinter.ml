@@ -69,7 +69,7 @@ and expression' e = expression (Position.value e)
 
 and funcall f es =
   match f, es with
-    | ("=" | "*" | "/" | "+" | "-" | "%"), [ lhs; rhs ] ->
+    | ("=" | "*" | "/" | "+" | "-" | "%" | "<" | ">" | "<=" | ">="), [ lhs; rhs ] ->
       group (parens (expression' lhs ++ string f ++ expression' rhs))
     | _, _ ->
       let ts = PPrintOCaml.tuple (List.map expression' es) in
