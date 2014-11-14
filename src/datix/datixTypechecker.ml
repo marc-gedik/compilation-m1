@@ -85,9 +85,6 @@ module TypingEnvironment : sig
   val lookup_tagged_union_type_from_tag
       : t -> tag -> type_identifier * (tag * typ list) list
 
-  (** [find_record_type tenv l] returns the typ of [l] in [env] *)
-  val find_record_type : t -> (label * typ) list -> typ
-
 end = struct
   type t = {
     variables : (identifier * typ) list;
@@ -174,16 +171,6 @@ end = struct
       | _ -> assert false (* Because of the predicate below. *)
     with Not_found ->
       raise (UnboundTag t)
-
-  exception NotARecord
-
-  let find_record_type tenv fs =
-    let rec aux = function
-      | [] -> raise NotARecord
-      | (x,RecordTy y)::l when y = fs -> TyIdentifier x
-      | _::l -> aux l
-    in
-    aux tenv.typedefs
 
 end
 
