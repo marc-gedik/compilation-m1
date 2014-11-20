@@ -69,7 +69,6 @@ rule token = parse
   | ">="            { GTE        }
   | "<"             { LT         }
   | "<="            { LTE        }
-  | ":="            { ASSIGNS    }
   | "->"            { RIGHTARROW }
 
   (** Symbols *)
@@ -83,8 +82,6 @@ rule token = parse
   | "}"             { RBRACE    }
   | "("             { LPAREN    }
   | ")"             { RPAREN    }
-  | "["             { LBRACKET  }
-  | "]"             { RBRACKET  }
   | eof             { EOF       }
 
   (** Lexing error. *)

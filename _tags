@@ -2,6 +2,7 @@ true : package(pprint), package(unix)
 
 <src/common>    : include
 <src/utilities> : include
+<src/hopix>     : include
 <src/datix>     : include
 <src/fopix>     : include
 <src/stackix>   : include

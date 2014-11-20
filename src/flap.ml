@@ -48,7 +48,8 @@ let eval runtime eval print =
   let now = Unix.gettimeofday () in
   let runtime, observation = eval runtime in
   let elapsed_time = Unix.gettimeofday () -. now in
-  print_endline ("(" ^ string_of_float elapsed_time ^ "s)");
+  if Options.get_benchmark () then
+    print_endline ("(" ^ string_of_float elapsed_time ^ "s)");
   print_endline (print runtime observation);
   runtime
 
