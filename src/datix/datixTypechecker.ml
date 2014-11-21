@@ -61,6 +61,12 @@ module TypingEnvironment : sig
   (** [UnboundTypeIdentifier t] is raised if no such type [t] exists. *)
   exception UnboundTypeIdentifier of type_identifier
 
+  (** [lookup_type_definition env t] looks for the definition of [t] in
+      [env]. May raise {!UnboundTypeIdentifier t} if no such definition
+      exists. *)
+  val lookup_type_definition
+    : t -> type_identifier -> type_definition
+
   (** [UnboundLabel l] is raised if no record type contains [l] as a label. *)
   exception UnboundLabel of label
 
@@ -70,8 +76,13 @@ module TypingEnvironment : sig
   val lookup_recordtype_from_label
       : t -> label -> type_identifier * (label * typ) list
 
+  (** This exception is raised when a type identifier is defined but
+      it is not a record type. *)
+  exception NotRecordType of type_identifier
+
   (** [lookup_recordtype env t] returns all the field types of
-      the record type [t] in [env]. May raise {!UnboundTypeIdentifier l}.*)
+      the record type [t] in [env].
+      May raise {!UnboundTypeIdentifier l} or {!NotRecordType t}.*)
   val lookup_recordtype
       : t -> type_identifier -> (label * typ) list
 
@@ -84,6 +95,16 @@ module TypingEnvironment : sig
       May raise {!UnboundTag t}. *)
   val lookup_tagged_union_type_from_tag
       : t -> tag -> type_identifier * (tag * typ list) list
+
+  (** This exception is raised if a type identifier is defined but it
+      is not a tagged union. *)
+  exception NotTaggedUnion of type_identifier
+
+  (** [lookup_tagged_union_typ env t] returns type definition of
+      the tagged union type [t] in [env].
+      May raise {!UnboundTypeIdentifier t} or {!NotTaggedUnion t}. *)
+  val lookup_tagged_union_type
+    : t -> type_identifier -> (tag * typ list) list
 
 end = struct
   type t = {
@@ -130,7 +151,7 @@ end = struct
 
   exception UnboundTypeIdentifier of type_identifier
 
-  let lookup_typedef env t =
+  let lookup_type_definition env t =
     try
       List.assoc t env.typedefs
     with Not_found -> raise (UnboundTypeIdentifier t)
@@ -138,9 +159,9 @@ end = struct
   exception NotRecordType of type_identifier
 
   let lookup_recordtype env t =
-    match lookup_typedef env t with
-    | RecordTy fs -> fs
-    | _ -> raise (NotRecordType t)
+    match lookup_type_definition env t with
+      | RecordTy fs -> fs
+      | _ -> raise (NotRecordType t)
 
   exception UnboundLabel of label
 
@@ -171,6 +192,13 @@ end = struct
       | _ -> assert false (* Because of the predicate below. *)
     with Not_found ->
       raise (UnboundTag t)
+
+  exception NotTaggedUnion of type_identifier
+
+  let lookup_tagged_union_type env t =
+    match lookup_type_definition env t with
+      | TaggedUnionTy ks -> ks
+      | _ -> raise (NotTaggedUnion t)
 
 end
 
@@ -211,7 +239,15 @@ let typecheck tenv ast =
        TypingEnvironment.bind_function tenv (Position.value f) signature
 
     | DefineType (t, tdef) ->
-       TypingEnvironment.bind_type_definition tenv t tdef
+      well_formed_type_definition (Position.position def) tenv tdef;
+      TypingEnvironment.bind_type_definition tenv t tdef
+
+  and well_formed_type_definition pos tenv = function
+    | RecordTy ltys ->
+         failwith "Student! This is your job!"
+
+    | TaggedUnionTy ktys ->
+         failwith "Student! This is your job!"
 
 
   (** [define_value tenv p e] returns a new environment that associates
@@ -223,6 +259,7 @@ let typecheck tenv ast =
   (** [infer_expression_type tenv e] returns the type of the expression
       [e] under the environment [tenv] if [e] is well-typed. *)
   and infer_expression_type tenv e =
+    let pos = Position.position e in
     match Position.value e with
     | Literal l ->
        infer_literal_type l
@@ -290,6 +327,17 @@ let typecheck tenv ast =
     | Case (e, bs) ->
        let etyp = infer_expression_type tenv e in
        infer_branches tenv etyp None bs
+
+
+  (** [check_exhaustiveness pos ks bs] ensures that there is no
+      forgotten cases in a case analysis assuming that [ks]
+      are the only tags that can appear in the patterns of
+      branches [bs]. *)
+  and check_exhaustiveness pos ks = function
+    | [] ->
+         failwith "Student! This is your job!"
+    | Branch (pat, _) :: bs ->
+         failwith "Student! This is your job!"
 
   (** [infer_branches tenv pty previous_branch_type (Branch (p, e))]
       checks that the pattern [p] has type [pty] and that the type of

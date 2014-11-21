@@ -7,18 +7,16 @@
 %token VAL DEF IN END IF THEN ELSE EVAL WITH CASE TYPE
 %token PLUS MINUS STAR SLASH GT GTE LT LTE EQUAL
 %token UNDERSCORE RIGHTARROW PIPE DOT
-%token LPAREN RPAREN LBRACE RBRACE LBRACKET RBRACKET
-%token ASSIGNS COMMA SEMICOLON COLON EOF
+%token LPAREN RPAREN LBRACE RBRACE
+%token COMMA SEMICOLON COLON EOF
 %token<int> INT
 %token<string> ID UID
 
 %right SEMICOLON
-%nonassoc ASSIGNS
 %nonassoc GT GTE LT LTE EQUAL
 %left PLUS MINUS
 %left STAR SLASH
 %left DOT
-%nonassoc LBRACKET
 
 %start<DatixAST.t> program
 
@@ -46,7 +44,7 @@ definition: VAL x=located(pattern) EQUAL e=located(expression)
 }
 | EVAL e=located(expression)
 {
-  DefineValue (Position.map (fun _ -> PWildcard) e, e)
+  DefineValue (Position.map (fun _ -> PVariable (Id "res")) e, e)
 }
 | TYPE t=type_identifier EQUAL td=type_definition
 {
@@ -117,14 +115,6 @@ expression:
 }
 | l=located(expression) b=binop r=located(expression) {
   FunCall (FunId b, [l; r])
-}
-| e=located(expression) LBRACKET i=located(expression) RBRACKET {
-  FunCall (FunId "block_get", [e; i])
-}
-| e=located(expression)
-  LBRACKET i=located(expression) RBRACKET
-  ASSIGNS v=located(expression) {
-  FunCall (FunId "block_set", [e; i; v])
 }
 | e1=located(expression) SEMICOLON e2=located(expression) {
   Define (Position.map (fun _ -> PWildcard) e1, e1, e2)

@@ -52,3 +52,9 @@ let dry_mode = ref false
 let get_dry_mode () = !dry_mode
 
 let set_dry_mode = ( := ) dry_mode
+
+let benchmark = ref true
+
+let set_benchmark = ( := ) benchmark
+
+let get_benchmark () = !benchmark

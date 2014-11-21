@@ -47,7 +47,12 @@ let generic_options = Arg.(align (List.flatten [
   options
     ["--dry"; "-d"]
     (Bool Options.set_dry_mode)
-    (" Ask the compiler not to produce compiled file")
+    (" Ask the compiler not to produce compiled file");
+
+  options
+    ["--bench"; "-B"]
+    (Bool Options.set_benchmark)
+    (" Ask the compiler to show evaluation time.");
 
 ]))
 
