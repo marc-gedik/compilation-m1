@@ -96,10 +96,10 @@ let translate (p : S.t) env =
 	 T.IfThenElse (c, et, ef)
 
       | S.Tuple es ->
-	 let block = (fresh_identifier ()) in
-	 let vBlock   = T.Variable block in
+	 let id = (fresh_identifier ()) in
+	 let vBlock   = T.Variable id in
 	 let l = List.mapi (fun i x -> [locate vBlock; locate (create_int i); expression' env x]) es in
-	 define pos block "block_create" (create_int_list_args pos [List.length es; 0])
+	 define pos id "block_create" (create_int_list_args pos [List.length es; 0])
 		(List.fold_left (fun x set -> define pos (fresh_identifier ()) "block_set" set x) vBlock l)
 
       | S.Record rs ->
@@ -121,61 +121,78 @@ let translate (p : S.t) env =
 	 define pos id "block_get" [block; locate (create_int n)] (T.Variable id)
 
       | S.TaggedValues (k, es) ->
-           failwith "Student! This is your job!3"
+	 let id = fresh_identifier () in
+	 let vBlock   = T.Variable id in
+	 let n = lookup_tag_representation env k in
+	 let size = (List.length es) + 1 in
+	 let l = List.mapi (fun i x -> [locate vBlock; locate (create_int (i+1)); expression' env x]) es in
+	 define pos id "block_create" (create_int_list_args pos [size;0])
+		(define pos (fresh_identifier ()) "block_set" ((locate vBlock)::create_int_list_args pos [0;n])
+		(List.fold_left (fun x set -> define pos (fresh_identifier ()) "block_set" set x) vBlock l))
 
       | S.Case (e, bs) ->
-           failwith "Student! This is your job!4"
+         branches env (expression' env e) bs
 
   and expression' env e =
     Position.map (expression (Position.position e) env) e
 
   and branches env x = function
     | [] ->
-         failwith "Student! This is your job!5"
-
+       create_int 57005
     | S.Branch (pat, e) :: bs ->
-         failwith "Student! This is your job!6"
+       failwith "if branches Student job!"
 
   and toplevel_pattern pos env x p =
     let locate () = Position.with_pos pos in
+    let e = expression' env x in
     match p with
     | S.PWildcard ->
-       let e = expression' env x in
-       [T.DefineValue (Position.with_pos pos (T.Id "_"), e)]
+       [T.DefineValue (locate () (T.Id "_"), e)]
 
     | S.PVariable y ->
-       let e = expression' env x in
-       [T.DefineValue (Position.with_pos pos (identifier y), e)]
+       [T.DefineValue (locate () (identifier y), e)]
 
     | S.PTuple ys ->
-       let S.Tuple x = Position.value x in
-       let e = List.map (expression' env) x in
-       List.map2 (fun id e -> T.DefineValue(Position.with_pos pos (identifier id),e)) ys e
+       toplevel_block_get pos e ys 0
 
     | S.PTaggedValues (k, ys) ->
-         failwith "Student! This is your job!10"
+       toplevel_block_get pos e ys 1
 
+  and toplevel_block_get pos e ys n  =
+    let locate () = Position.with_pos pos in
+    let block = fresh_identifier () in
+    let vBlock = locate () (T.Variable block) in
+    T.DefineValue (locate () block, e)::
+      (List.mapi (fun i x -> defineValue pos (identifier x) "block_get" [vBlock; locate () (create_int (i+n))]) ys)
 
   and pattern pos env x pat e =
+    let locate () = Position.with_pos pos in
     match pat with
       | S.PWildcard ->
-	 T.Define (Position.with_pos pos (T.Id "_"), x, e)
+	 T.Define (locate () (T.Id "_"), x, e)
 
       | S.PVariable y ->
-	 T.Define (Position.with_pos pos (identifier y), x, e)
+	 T.Define (locate ()(identifier y), x, e)
 
       | S.PTuple ys ->
 	 let block = fresh_identifier () in
-	 let vBlock = Position.with_pos pos (T.Variable block) in
+	 let vBlock = locate () (T.Variable block) in
 	 let l = List.mapi (fun i x -> i,x) ys in
-	 T.Define (Position.with_pos pos block, x, Position.with_pos pos
+	 T.Define (locate () block, x, locate ()
 		   (List.fold_left
 		      (fun e (i,y) ->
-		       define pos (identifier y) "block_get" [vBlock; Position.with_pos pos (create_int i)] e)
+		       define pos (identifier y) "block_get" [vBlock; locate () (create_int i)] e)
 		      (Position.value e) l))
 
       | S.PTaggedValues (k, ys) ->
-         failwith "Student! This is your job!14"
+	 let block = fresh_identifier () in
+	 let vBlock = locate () (T.Variable block) in
+	 let l = List.mapi (fun i x -> i,x) ys in
+	 T.Define (locate () block, x, locate ()
+		 (List.fold_left
+		      (fun e (i,y) ->
+		       define pos (identifier y) "block_get" [vBlock; locate () (create_int (i+1))] e)
+		      (Position.value e) l))
 
   and pattern' env x pat e =
     pattern (Position.position pat) env x (Position.value pat) e
@@ -205,12 +222,17 @@ let translate (p : S.t) env =
        List.fold_left (fun env x -> bind_label_representation env x) env l
 
     | S.DefineType (_, TaggedUnionTy l) ->
-       List.fold_left (fun env x -> bind_tag_representation env ((fst x),(List.length (snd x)))) env l
+       let l = List.mapi (fun i (x,_) -> x,i) l in
+       List.fold_left (fun env x -> bind_tag_representation env x) env l
 
     | _ -> env
 
   and create_int x =
     T.Literal (T.LInt x)
+
+  and defineValue pos s fid es =
+    T.DefineValue (Position.with_pos pos s,
+	      Position.with_pos pos (T.FunCall (T.FunId fid, es)))
 
   and define pos s fid es e =
     T.Define (Position.with_pos pos s,
