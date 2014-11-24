@@ -160,7 +160,6 @@ and expression pos env = function
 
   | Source.AST.Variable (Source.AST.Id x as i) ->
 
-    print_string x;
     begin
       try
 	let idx = ExtStd.List.index_of (( = ) i) env.variables in
@@ -192,11 +191,11 @@ and expression pos env = function
     @ (single_instruction (Target.AST.Jump label_next))
     @ block_next
 
-  | Source.AST.FunCall (Source.AST.FunId f, actuals) 
-      when f = "block_create" || f = "block_get" || f = "block_set" ->
-    let instructions = List.(flatten (rev_map (expression' env) actuals)) in
-    instructions 
-    @ single_instruction (Target.AST.Jump (Target.AST.Label f))
+  | Source.AST.FunCall (Source.AST.FunId f, actuals)
+       when f = "block_create" || f = "block_get" || f = "block_set" ->
+    let instructions = List.(flatten (map (expression' env) actuals)) in
+    instructions
+    @ single_instruction (fun_to_instruction f)
 
   (* </corrige> *)
   | Source.AST.FunCall (Source.AST.FunId f, [e1; e2])
@@ -280,3 +279,8 @@ and located_instruction i =
 and undef_n_times = function
   | 0 -> []
   | n -> (single_instruction Target.AST.Undefine) @ (undef_n_times (n-1))
+
+and fun_to_instruction = function
+  | "block_create" -> Target.AST.BlockCreate
+  | "block_get"    -> Target.AST.BlockGet
+  | "block_set"    -> Target.AST.BlockSet

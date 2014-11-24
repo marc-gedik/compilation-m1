@@ -25,7 +25,7 @@ let error msg =
    (ii) be able to relate each label with an instruction.
        (see {!load})
 
-*)
+ *)
 
 
 (** ----------------------- *)
@@ -92,9 +92,6 @@ end = struct
   let depth s = s.size
 
   let _get l i =
-    (* print_string "to get : "; *)
-    (* print_int (l.size -i-1); *)
-    (* print_string "\n"; *)
     l.stack.(l.size -i-1)
 
   let _set l i x =
@@ -107,7 +104,7 @@ end = struct
 
   let increment_size l =
     modif_size l 1
-			
+
   let decrement_size l =
     modif_size l (-1)
 
@@ -124,12 +121,12 @@ end = struct
 		 end
     in
     s.stack <- Array.(append s.stack (make size x))
-    
+
   let push x l =
     if l.size = l.max_size then increase l x
     else _add l 0 x;
     increment_size l
-    		       
+
   exception EmptyStack
   exception UnboundStackElement of int
   exception CannotSwap
@@ -162,11 +159,17 @@ end = struct
       }
 
   let print printer s =
-
     let rec aux i =
-      if i >= 0 then
-	printer (_get s i) :: aux (i-1)
-      else []
+      if i>= 0 then
+	let x = printer (_get s i) in
+	if i = 0
+	then if x = "" then [] else [x]
+	else
+	  if x = ""
+	  then aux (i-1)
+	  else printer (_get s i) :: aux (i-1)
+      else
+	[]
     in
     String.concat "\n" (aux (s.size-1))
 
@@ -231,8 +234,8 @@ let initial_runtime () = {
 
 let show_runtime runtime =
   Printf.printf "=== Values ===\n%s\n=== Variables ===\n%s\n"
-    (Stack.print print_data runtime.values)
-    (Stack.print (fun (Id x, d) -> x ^ " = " ^ print_data d) runtime.variables)
+		(Stack.print print_data runtime.values)
+		(Stack.print (fun (Id x, d) -> x ^ " = " ^ print_data d) runtime.variables)
 
 (** -------------------------- *)
 (** {1 Instruction execution } *)
@@ -262,15 +265,15 @@ let evaluate runtime (ast : t) =
       jump to a label. (This jump can unconditional or conditional). *)
   let rec load cl cblocks = function
     | [] ->
-      Hashtbl.add blocks cl (List.rev cblocks)
+       Hashtbl.add blocks cl (List.rev cblocks)
     | (None, i) :: is ->
-      load cl (Position.value i :: cblocks) is
+       load cl (Position.value i :: cblocks) is
     | (Some l, i) :: is ->
-      if !entry = None then
-        entry := Some l
-      else
-        Hashtbl.add blocks cl (List.rev cblocks);
-      load l [Position.value i] is
+       if !entry = None then
+         entry := Some l
+       else
+         Hashtbl.add blocks cl (List.rev cblocks);
+       load l [Position.value i] is
   in
   load (Label "") [] ast;
 
@@ -278,88 +281,87 @@ let evaluate runtime (ast : t) =
       execute each of them. *)
   let rec execute_block = function
     | [] ->
-      ()
+       ()
     | [i] ->
-      execute_instruction i
+       execute_instruction i
     | i :: is ->
-      execute_instruction i;
-      execute_block is
+       execute_instruction i;
+       execute_block is
 
   (** [execute_instruction implements the semantics of the
       machine instructions. *)
   and execute_instruction i =
-    Stack.print print_data values;
     match i with
-      | Define x ->
-        Stack.(push (x, get 0 values) variables);
-        Stack.pop values
+    | Define x ->
+       Stack.(push (x, get 0 values) variables);
+       Stack.pop values
 
-      | Undefine ->
-        Stack.pop variables
+    | Undefine ->
+       Stack.pop variables
 
-      | GetVariable i ->
-        Stack.(push (snd (get i variables)) values)
+    | GetVariable i ->
+       Stack.(push (snd (get i variables)) values)
 
-      | Remember k ->
-        Stack.push (DInt k) values
+    | Remember k ->
+       Stack.push (DInt k) values
 
-      | RememberLabel l ->
-        Stack.push (DLabel l) values
+    | RememberLabel l ->
+       Stack.push (DLabel l) values
 
-      | Swap ->
-        Stack.swap values
+    | Swap ->
+       Stack.swap values
 
-      | Binop op ->
-        let x = Stack.get 0 values
-        and y = Stack.get 1 values
-        in
-        Stack.pop values;
-        Stack.pop values;
-        Stack.push (binop op x y) values
+    | Binop op ->
+       let x = Stack.get 0 values
+       and y = Stack.get 1 values
+       in
+       Stack.pop values;
+       Stack.pop values;
+       Stack.push (binop op x y) values
 
-      | Exit ->
-        raise ExitNow
+    | Exit ->
+       raise ExitNow
 
-      | Jump (Label "block_create") ->
-         let DInt size = Stack.get 0 values in
-         let init = Stack.get 1 values in
-         Stack.pop values;
-         Stack.pop values;
-         Stack.push (DLocation (Memory.allocate memory size init)) values
+    | BlockCreate ->
+       let DInt size = Stack.get 1 values in
+       let init = Stack.get 0 values in
+       Stack.pop values;
+       Stack.pop values;
+       Stack.push (DLocation (Memory.allocate memory size init)) values
 
 
-      | Jump (Label "block_get") ->
-         let DLocation location = Stack.get 0 values in
-	 let DInt index = Stack.get 1 values in 
-	 Stack.pop values;
-	 Stack.pop values;
-	 Stack.push (Memory.read (Memory.dereference memory location) index) values
+    | BlockGet ->
+       let DLocation location = Stack.get 1 values in
+       let DInt index = Stack.get 0 values in
+       Stack.pop values;
+       Stack.pop values;
+       Stack.push (Memory.read (Memory.dereference memory location) index) values
 
-      | Jump (Label "block_set") ->
-         let DLocation location = Stack.get 0 values in
-	 let DInt index = Stack.get 1 values in 
-	 let e = Stack.get 2 values in 
-	 Stack.pop values; 
-	 Stack.pop values;
-	 Stack.pop values;
-         Memory.write (Memory.dereference memory location) index e;
-	 Stack.push DUnit values
+    | BlockSet ->
+       let DLocation location = Stack.get 2 values in
+       let DInt index = Stack.get 1 values in
+       let e = Stack.get 0 values in
+       Stack.pop values;
+       Stack.pop values;
+       Stack.pop values;
+       Memory.write (Memory.dereference memory location) index e;
+       Stack.push DUnit values
 
-      | Jump l ->
-         jump l
+    | Jump l ->
+       jump l
 
-      | UJump ->
-         let l = as_lbl (Stack.get 0 values) in
-         Stack.pop values;
-         jump l
+    | UJump ->
+       let l = as_lbl (Stack.get 0 values) in
+       Stack.pop values;
+       jump l
 
-      | ConditionalJump (tl, fl) ->
-        let b = Stack.get 0 values in
-        Stack.pop values;
-        if as_bool b then jump tl else jump fl
+    | ConditionalJump (tl, fl) ->
+       let b = Stack.get 0 values in
+       Stack.pop values;
+       if as_bool b then jump tl else jump fl
 
-      | Comment _ ->
-        ()
+    | Comment _ ->
+       ()
 
   and jump (Label x as l) =
     let block =
@@ -388,11 +390,11 @@ let evaluate runtime (ast : t) =
       of the program entry point. *)
   and run () =
     match !entry with
-      | None -> ()
-      | Some l -> jump l
+    | None -> ()
+    | Some l -> jump l
   in
   begin try
-          run ();
+      run ();
     with ExitNow -> ();
   end;
 
@@ -407,10 +409,10 @@ let evaluate runtime (ast : t) =
 
 let print_observable runtime obs =
   Stack.print (fun (Id x, v) ->
-    (* Identifier starting with '_' are reserved by the compiler.
+	       (* Identifier starting with '_' are reserved by the compiler.
        So their values are hidden to the user. *)
-    if x.[0] = '_' then
-      ""
-    else
-      x ^ " = " ^ print_data v
-  ) obs.new_variables
+	       if x.[0] = '_' then
+		 ""
+	       else
+		 x ^ " = " ^ print_data v
+	      ) obs.new_variables

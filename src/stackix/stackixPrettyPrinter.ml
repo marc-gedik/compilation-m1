@@ -49,7 +49,12 @@ and instruction = function
     string ("conditional_jump " ^ tl ^ " or " ^ tf)
   | Comment s ->
     string (";; " ^ s)
-
+  | BlockCreate ->
+    string "block_create"
+  | BlockSet ->
+    string "block_set"
+  | BlockGet ->
+    string "block_get"
 
 and binop = function
   | Add -> "add"

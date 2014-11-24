@@ -204,10 +204,22 @@ end
 
 type typing_environment = TypingEnvironment.t
 
+let bind_binop tenv l typ ret =
+  List.fold_left
+    (fun tenv x -> TypingEnvironment.bind_function tenv (FunId x) (Signature ([typ; typ], ret)))
+    tenv
+    l
+
 (** The initial environment contains the type of the primitive functions. *)
 let initial_typing_environment () =
-  TypingEnvironment.empty
-(* TODO Ajouter les taggedUnion ?*)
+  let tenv = TypingEnvironment.empty in
+  let tenv = TypingEnvironment.bind_type_definition
+	       tenv (TId "bool") (TaggedUnionTy [Constructor "True", [];Constructor "False", []]) in
+  let tenv = bind_binop tenv ["+"; "-"; "*"; "/"] tyint tyint in
+  let tenv = bind_binop tenv ["<"; "<="; ">"; ">="; "="] tyint tybool in
+  tenv
+
+    (* TODO Ajouter les taggedUnion ?*)
 
 let rec check_record_label l fs =
   match l,fs with
@@ -223,20 +235,37 @@ let rec check_record_label l fs =
     under the typing environment [tenv]. *)
 let typecheck tenv ast =
   let rec program tenv p =
+    let tenv = List.fold_left first_pass tenv p in
     List.fold_left definition tenv p
+
+  and first_pass tenv def =
+    match Position.value def with
+    | DefineFunction (f, xs, Some typ, e) ->
+       let typs = snd (List.split xs) in
+       let signature = Signature (typs, typ) in
+       TypingEnvironment.bind_function tenv (Position.value f) signature
+
+    | _ -> tenv
 
   and definition tenv def =
     match Position.value def with
     | DefineValue (p, e) ->
        define_value tenv p e
 
-    | DefineFunction (f, xs, _, e) ->
-       let typs = snd (List.split xs) in
+    | DefineFunction (f, xs, None, e) ->
        let xsId, xsTyp = List.split xs in
        let tenv' = List.fold_left2 check_variable tenv xsTyp xsId in
        let ret = infer_expression_type tenv' e in
-       let signature = Signature (typs,ret) in
+       let signature = Signature (xsTyp,ret) in
        TypingEnvironment.bind_function tenv (Position.value f) signature
+
+
+    | DefineFunction (f, xs, Some typ, e) ->
+       let xsId, xsTyp = List.split xs in
+       let tenv' = List.fold_left2 check_variable tenv xsTyp xsId in
+       check_expression_type tenv' typ e;
+       tenv
+
 
     | DefineType (t, tdef) ->
       well_formed_type_definition (Position.position def) tenv tdef;
@@ -244,11 +273,10 @@ let typecheck tenv ast =
 
   and well_formed_type_definition pos tenv = function
     | RecordTy ltys ->
-         failwith "Student! This is your job!"
+       ()
 
     | TaggedUnionTy ktys ->
-         failwith "Student! This is your job!"
-
+        ()
 
   (** [define_value tenv p e] returns a new environment that associates
       a type to each of the variables bound by the pattern [p]. *)
@@ -277,10 +305,10 @@ let typecheck tenv ast =
        let tenv = define_value tenv p e1 in
        infer_expression_type tenv e2
 
-    (* TODO funcall binop *)
     | FunCall (FunId id as f, es) ->
-       let Signature (l, typ) = TypingEnvironment.lookup_function tenv f in
-       (* TODO tester type des arguments *)
+       let Signature (xs, typ) = TypingEnvironment.lookup_function tenv f in
+       check_same_length pos xs es;
+       List.iter2 (check_expression_type tenv) xs es;
        typ
 
     | IfThenElse (c, te, fe) ->
@@ -292,10 +320,10 @@ let typecheck tenv ast =
 	   let fe = infer_expression_type tenv fe in
 	   if te = fe
 	   then te
-	   else failwith "Todo raise pas meme type"
+	   else error pos "Not same type"
          end
        else
-	 failwith "Todo raise condition pas un bool"
+	 error pos "Not a boolean"
 
     | Tuple es ->
        let typs = List.map (infer_expression_type tenv) es in
@@ -316,13 +344,21 @@ let typecheck tenv ast =
        let id =
 	 match infer_expression_type tenv e with
 	 | TyIdentifier id -> id
-	 | _ -> failwith "L'expression n'est pas un record"
+	 | _ -> error pos "Not a record"
        in
        let typs = TypingEnvironment.lookup_recordtype tenv id in
        List.assoc l typs
 
     | TaggedValues (k, es) ->
-       failwith "15Student! This is your job!"
+       let id, union = TypingEnvironment.lookup_tagged_union_type_from_tag tenv k in
+       let typs = List.assoc k union in
+       check_same_length pos es typs;
+       List.iter2 (fun e typ -> if (infer_expression_type tenv e) <> typ
+				then error pos "Error in args"
+				else ())
+		  es
+		  typs;
+       TyIdentifier id
 
     | Case (e, bs) ->
        let etyp = infer_expression_type tenv e in
@@ -335,9 +371,9 @@ let typecheck tenv ast =
       branches [bs]. *)
   and check_exhaustiveness pos ks = function
     | [] ->
-         failwith "Student! This is your job!"
+         failwith "exau Student! This is your job!"
     | Branch (pat, _) :: bs ->
-         failwith "Student! This is your job!"
+         failwith "exau Student! This is your job!"
 
   (** [infer_branches tenv pty previous_branch_type (Branch (p, e))]
       checks that the pattern [p] has type [pty] and that the type of
@@ -357,7 +393,7 @@ let typecheck tenv ast =
          | None -> infer_branches tenv pty (Some etyp) bs
          | Some ty -> if etyp = ty
 		      then infer_branches tenv pty (Some ty) bs
-		      else failwith("pas le meme type")
+		      else error (Position.dummy) "Different type"
        end
 
   (** [check_pattern tenv pty pat] checks that [pat] can be assigned
@@ -376,7 +412,10 @@ let typecheck tenv ast =
        tenv
 
     | PTaggedValues (k, xs), TyIdentifier t ->
-       failwith "Student..."
+       let union = TypingEnvironment.lookup_tagged_union_type tenv t in
+       let typs  = List.assoc k union in
+       check_same_length (Position.position pat) xs typs;
+       List.fold_left2 check_variable tenv typs xs
 
     | _, _ ->
        error (Position.position pat) (

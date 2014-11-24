@@ -160,11 +160,11 @@ and expression position runtime = function
 
   | Define (x, ex, e) ->
     let v = expression' runtime ex in
-    let runtime = { runtime with
+    let runtime' = { runtime with
       environment = Environment.bind runtime.environment (Position.value x) v
     }
     in
-    expression' runtime e
+    expression' runtime' e
 
   (** block_create (size, init) (init -> valeur dans chaque case) *)
   | FunCall (FunId "block_create", [size; init]) ->

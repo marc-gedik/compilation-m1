@@ -158,8 +158,9 @@ and is_binary_primitive = function
 
 and expression position runtime = function
   | RecordField (e, l) ->
-     let value = expression' runtime e in
-     VRecord [l,value]
+     let VRecord recs = expression' runtime e in
+     let value = List.assoc l recs in
+     value
 
   | Tuple es ->
      let values = List.map (expression' runtime) es in
@@ -209,7 +210,7 @@ and branches runtime v = function
 
   | Branch (pat, e) :: bs ->
      (try
-	 bind_pattern runtime pat v;
+	 let runtime = bind_pattern runtime pat v in
 	 expression' runtime e
        with _ -> branches runtime v bs
      )
@@ -231,7 +232,9 @@ and bind_pattern runtime pat v : runtime =
      else assert false (* by typing *)
 
   | PTaggedValues (k, xs), VTagged (k', vs) ->
-     failwith "8Student! This is your job!"
+     if k = k'
+     then List.fold_left2 bind_variable runtime xs vs
+     else failwith ("Tag are not the same" ^ (tag k) ^ " vs " ^ (tag k'))
 
   | _, _ ->
      assert false (* By typing. *)
