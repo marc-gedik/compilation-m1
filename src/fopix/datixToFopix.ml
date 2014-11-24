@@ -49,7 +49,7 @@ let translate (p : S.t) env =
       Fopix blocks.
   *)
   let rec program env p =
-    let env = choose_data_representation env p in
+    let env = List.fold_left choose_data_representation env p in
     let defs = List.(flatten (map (definition' env) p)) in
     (defs, env)
 
@@ -58,7 +58,8 @@ let translate (p : S.t) env =
 
   and definition env = function
     | S.DefineValue (pat, e) ->
-       failwith "Student! This is your job!"
+       let id = toplevel_pattern' env e pat in
+       id
 
     | S.DefineFunction (f, xs, _, e) ->
        let f  = function_identifier' f in
@@ -80,7 +81,9 @@ let translate (p : S.t) env =
 	 T.(Variable (Id x))
 
       | S.Define (pat, e1, e2) ->
-           failwith "Student! This is your job!"
+	 let e1 = expression' env e1 in
+	 let e2 = expression' env e2 in
+	 pattern' env e1 pat e2
 
       | S.FunCall (S.FunId f, es) ->
 	 let es = List.map (expression' env) es in
@@ -93,61 +96,92 @@ let translate (p : S.t) env =
 	 T.IfThenElse (c, et, ef)
 
       | S.Tuple es ->
-           failwith "Student! This is your job!"
+	 let block = (fresh_identifier ()) in
+	 let vBlock   = T.Variable block in
+	 let l = List.mapi (fun i x -> [locate vBlock; locate (create_int i); expression' env x]) es in
+	 define pos block "block_create" (create_int_list_args pos [List.length es; 0])
+		(List.fold_left (fun x set -> define pos (fresh_identifier ()) "block_set" set x) vBlock l)
 
       | S.Record rs ->
-           failwith "Student! This is your job!"
+	 let block = (fresh_identifier ()) in
+	 let vBlock   = T.Variable block in
+	 let l = List.map (fun (lbl,e) ->
+			   [locate vBlock;
+			    locate (create_int (lookup_label_representation env lbl));
+			    expression' env e])
+			  rs
+	 in
+	 define pos block "block_create" (create_int_list_args pos [List.length rs; 0])
+		(List.fold_left (fun x set -> define pos (fresh_identifier ()) "block_set" set x) vBlock l)
 
       | S.RecordField (e, l) ->
-           failwith "Student! This is your job!"
+	 let id = fresh_identifier () in
+	 let n = lookup_label_representation env l in
+         let block = expression' env e in
+	 define pos id "block_get" [block; locate (create_int n)] (T.Variable id)
 
       | S.TaggedValues (k, es) ->
-           failwith "Student! This is your job!"
+           failwith "Student! This is your job!3"
 
       | S.Case (e, bs) ->
-           failwith "Student! This is your job!"
+           failwith "Student! This is your job!4"
 
   and expression' env e =
     Position.map (expression (Position.position e) env) e
 
   and branches env x = function
     | [] ->
-         failwith "Student! This is your job!"
+         failwith "Student! This is your job!5"
 
     | S.Branch (pat, e) :: bs ->
-         failwith "Student! This is your job!"
+         failwith "Student! This is your job!6"
 
   and toplevel_pattern pos env x p =
+    let locate () = Position.with_pos pos in
     match p with
     | S.PWildcard ->
-         failwith "Student! This is your job!"
+       let e = expression' env x in
+       [T.DefineValue (Position.with_pos pos (T.Id "_"), e)]
 
     | S.PVariable y ->
-         failwith "Student! This is your job!"
+       let e = expression' env x in
+       [T.DefineValue (Position.with_pos pos (identifier y), e)]
 
     | S.PTuple ys ->
-         failwith "Student! This is your job!"
+       let S.Tuple x = Position.value x in
+       let e = List.map (expression' env) x in
+       List.map2 (fun id e -> T.DefineValue(Position.with_pos pos (identifier id),e)) ys e
 
     | S.PTaggedValues (k, ys) ->
-         failwith "Student! This is your job!"
+         failwith "Student! This is your job!10"
 
 
   and pattern pos env x pat e =
     match pat with
       | S.PWildcard ->
-           failwith "Student! This is your job!"
+	 T.Define (Position.with_pos pos (T.Id "_"), x, e)
 
       | S.PVariable y ->
-           failwith "Student! This is your job!"
+	 T.Define (Position.with_pos pos (identifier y), x, e)
 
       | S.PTuple ys ->
-           failwith "Student! This is your job!"
+	 let block = fresh_identifier () in
+	 let vBlock = Position.with_pos pos (T.Variable block) in
+	 let l = List.mapi (fun i x -> i,x) ys in
+	 T.Define (Position.with_pos pos block, x, Position.with_pos pos
+		   (List.fold_left
+		      (fun e (i,y) ->
+		       define pos (identifier y) "block_get" [vBlock; Position.with_pos pos (create_int i)] e)
+		      (Position.value e) l))
 
       | S.PTaggedValues (k, ys) ->
-           failwith "Student! This is your job!"
+         failwith "Student! This is your job!14"
 
   and pattern' env x pat e =
     pattern (Position.position pat) env x (Position.value pat) e
+
+  and toplevel_pattern' env x pat =
+    toplevel_pattern (Position.position pat) env x (Position.value pat)
 
   and literal = function
     | S.LInt x -> T.LInt x
@@ -165,8 +199,26 @@ let translate (p : S.t) env =
     List.(map identifier (fst (split xs)))
 
   and choose_data_representation env defs =
-       failwith "Student! This is your job!"
+    match (Position.value defs) with
+    | S.DefineType (_, RecordTy l) ->
+       let l = List.mapi (fun i (x,_) -> x,i) l in
+       List.fold_left (fun env x -> bind_label_representation env x) env l
+
+    | S.DefineType (_, TaggedUnionTy l) ->
+       List.fold_left (fun env x -> bind_tag_representation env ((fst x),(List.length (snd x)))) env l
+
+    | _ -> env
+
+  and create_int x =
+    T.Literal (T.LInt x)
+
+  and define pos s fid es e =
+    T.Define (Position.with_pos pos s,
+	      Position.with_pos pos (T.FunCall (T.FunId fid, es)),
+	      Position.with_pos pos e)
+
+  and create_int_list_args pos l =
+    List.map (fun x -> Position.with_pos pos (create_int x)) l
 
   in
   program env p
-
