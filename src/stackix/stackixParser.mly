@@ -9,7 +9,7 @@
 %token REMEMBER DEFINE UNDEFINE ADD MUL DIV SUB GT GTE LT LTE EQ EXIT
 %token COLON EOF
 %token<int> INT
-%token<string> ID COMMENT
+%token<string> ID COMMENT LABEL
 
 %start<StackixAST.t> program
 
@@ -35,6 +35,7 @@ label: l=ID COLON {
 
 instruction:
   REMEMBER i=INT       { Remember i                             }
+| REMEMBER i=LABEL     { RememberLabel (Label i)                }
 | DEFINE x=ID          { Define (Id x)                          }
 | UNDEFINE             { Undefine                               }
 | EXIT                 { Exit                                   }
