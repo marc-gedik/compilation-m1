@@ -214,13 +214,13 @@ let bind_binop tenv l typ ret =
 let initial_typing_environment () =
   let tenv = TypingEnvironment.empty in
   let tenv = TypingEnvironment.bind_type_definition
-	       tenv (TId "_bool") (TaggedUnionTy [Constructor "True", [];Constructor "False", []]) in
+	       tenv (TId "bool") (TaggedUnionTy [Constructor "True", [];Constructor "False", []]) in
   let tenv = bind_binop tenv ["+"; "-"; "*"; "/"] tyint tyint in
   let tenv = bind_binop tenv ["<"; "<="; ">"; ">="; "="] tyint tybool in
   tenv
 
 let is_bool c =
-   c = tybool || c = (TyIdentifier (TId "_bool"))
+   c = tybool || c = (TyIdentifier (TId "bool"))
 
 let check_record_label pos l fs =
   let rec aux l fs =

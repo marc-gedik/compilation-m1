@@ -176,7 +176,7 @@ let translate (p : S.t) env =
 			   [locate () (create_int (lookup_tag_representation env k));
 			    locate () (T.FunCall (T.FunId "block_get",
 						  [locate () x; locate ()(create_int 0)]))]))) in
-	  locate () (T.IfThenElse (locate () cond,  expression' env e, branches env x bs))
+	  locate () (T.IfThenElse (locate () cond, locate () (pattern' env (locate () x) pat (expression' env e)), branches env x bs))
 
   and toplevel_pattern pos env x p =
     let locate () = Position.with_pos pos in

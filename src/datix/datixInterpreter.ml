@@ -234,7 +234,7 @@ and bind_pattern runtime pat v : runtime =
   | PTaggedValues (k, xs), VTagged (k', vs) ->
      if k = k'
      then List.fold_left2 bind_variable runtime xs vs
-     else error [Position.position pat] ("Tag are not the same" ^ (tag k) ^ " vs " ^ (tag k'))
+     else failwith ("Tag are not the same" ^ (tag k) ^ " vs " ^ (tag k'))
 
   | _, _ ->
      assert false (* By typing. *)
