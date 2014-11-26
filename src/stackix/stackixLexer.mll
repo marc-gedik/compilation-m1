@@ -36,29 +36,31 @@ rule token = parse
   | ";;" ([^'\n']* as c) { COMMENT c }
 
   (** Keywords *)
-  | "add"              { ADD }
-  | "mul"              { MUL }
-  | "div"              { DIV }
-  | "sub"              { SUB }
-  | "gt"               { GT  }
-  | "gte"              { GTE }
-  | "lt"               { LT  }
-  | "lte"              { LTE }
-  | "eq"               { EQ }
-  | "swap"             { SWAP }
-  | "conditional_jump" { CJUMP }
-  | "jump"             { JUMP }
-  | "ujump"            { UJUMP }
-  | "or"               { OR }
-  | "remember"         { REMEMBER }
-  | "define"           { DEFINE }
-  | "undefine"         { UNDEFINE }
-  | "getvariable"      { GETVARIABLE }
-  | "exit"             { EXIT }
-  | "block_create"     { BLOCKCREATE }
-  | "block_get"        { BLOCKGET }
-  | "block_set"        { BLOCKSET }
-  | identifier as i    { ID i }
+  | "add"                 { ADD }
+  | "mul"                 { MUL }
+  | "div"                 { DIV }
+  | "sub"                 { SUB }
+  | "gt"                  { GT  }
+  | "gte"                 { GTE }
+  | "lt"                  { LT  }
+  | "lte"                 { LTE }
+  | "eq"                  { EQ }
+  | "swap"                { SWAP }
+  | "conditional_jump"    { CJUMP }
+  | "jump"                { JUMP }
+  | "ujump"               { UJUMP }
+  | "or"                  { OR }
+  | "remember"            { REMEMBER }
+  | "define"              { DEFINE }
+  | "undefine"            { UNDEFINE }
+  | "getvariable"         { GETVARIABLE }
+  | "exit"                { EXIT }
+  | "block_create"        { BLOCKCREATE }
+  | "block_get"           { BLOCKGET }
+  | "block_set"           { BLOCKSET }
+  | identifier as i       { ID i }
+  | '@' (identifier as i) { LABEL i }
+
 
   (** Literals *)
   | digit+ as d     { INT (int_of_string d) }
