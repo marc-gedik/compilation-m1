@@ -236,7 +236,7 @@ and binop
 	   match expression' runtime c with
 	   | VBool b when b = true -> t
 	   | VBool _ -> f
-	   | _ as value -> failwith (print_value value ^ " is not a bool")
+	   | _ as value -> error [(Position.position c)] (print_value value ^ " is not a bool")
 	 in
 	 expression' runtime expr
 
@@ -252,7 +252,7 @@ and binop
        and bind_args formals args runtime =
 	 match formals, args with
 	 | [], [] -> runtime
-	 | _::_, [] | [], _::_ -> failwith "TODO raise mauvais arguments"
+	 | _::_, [] | [], _::_ -> error (List.map Position.position args) "Erreur in args"
 	 | var::formals, value::args ->
 	    let value = expression' runtime value in
 	    let runtime = { runtime with

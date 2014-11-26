@@ -164,7 +164,7 @@ and expression pos env = function
       try
 	let idx = ExtStd.List.index_of (( = ) i) env.variables in
 	single_instruction (Target.AST.GetVariable idx)
-      with Not_found -> failwith("error: " ^ x ^ " not found")
+      with Not_found -> error pos (x ^ " not found")
     end
 
   | Source.AST.Define (x, e1, e2) ->

@@ -214,22 +214,26 @@ let bind_binop tenv l typ ret =
 let initial_typing_environment () =
   let tenv = TypingEnvironment.empty in
   let tenv = TypingEnvironment.bind_type_definition
-	       tenv (TId "bool") (TaggedUnionTy [Constructor "True", [];Constructor "False", []]) in
+	       tenv (TId "_bool") (TaggedUnionTy [Constructor "True", [];Constructor "False", []]) in
   let tenv = bind_binop tenv ["+"; "-"; "*"; "/"] tyint tyint in
   let tenv = bind_binop tenv ["<"; "<="; ">"; ">="; "="] tyint tybool in
   tenv
 
-    (* TODO Ajouter les taggedUnion ?*)
+let is_bool c =
+   c = tybool || c = (TyIdentifier (TId "_bool"))
 
-let rec check_record_label l fs =
-  match l,fs with
-  | [], [] -> ()
-  | (lb1,_)::l, (lb2,_)::fs ->
-     if lb1 = lb2
-     then check_record_label l fs
-     else failwith "Unbound record field lb2"
-  | [], (lb, _)::l -> failwith "Unbound record field lb"
-  | l, [] -> failwith "Some record fields are undefined"
+let check_record_label pos l fs =
+  let rec aux l fs =
+    match l,fs with
+    | [], [] -> ()
+    | (lb1,_)::l, (lb2,_)::fs ->
+       if lb1 = lb2
+       then aux l fs
+       else error pos "Unbound record field"
+    | [], (lb, _)::l -> error pos "Unbound record field"
+    | _, [] ->  error pos "Some record fields are undefined"
+  in
+  aux l fs
 
 (** [typecheck tenv ast] checks that [ast] is a well-formed program
     under the typing environment [tenv]. *)
@@ -276,7 +280,7 @@ let typecheck tenv ast =
        ()
 
     | TaggedUnionTy ktys ->
-        ()
+       ()
 
   (** [define_value tenv p e] returns a new environment that associates
       a type to each of the variables bound by the pattern [p]. *)
@@ -313,7 +317,8 @@ let typecheck tenv ast =
 
     | IfThenElse (c, te, fe) ->
        let c = infer_expression_type tenv c in
-       if c  = tybool
+       let b = is_bool c in
+       if b
        then
 	 begin
 	   let te = infer_expression_type tenv te in
@@ -337,7 +342,7 @@ let typecheck tenv ast =
        in
        let fs = List.sort compare fs in
        let l  = List.sort compare l  in
-       check_record_label l fs;
+       check_record_label pos l fs;
        TyIdentifier t
 
     | RecordField (e, (Label lid as l)) ->
@@ -453,3 +458,4 @@ type a b. Position.t -> a list -> b list -> unit =
 
      in
      program tenv ast
+

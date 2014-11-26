@@ -234,7 +234,7 @@ and bind_pattern runtime pat v : runtime =
   | PTaggedValues (k, xs), VTagged (k', vs) ->
      if k = k'
      then List.fold_left2 bind_variable runtime xs vs
-     else failwith ("Tag are not the same" ^ (tag k) ^ " vs " ^ (tag k'))
+     else error [Position.position pat] ("Tag are not the same" ^ (tag k) ^ " vs " ^ (tag k'))
 
   | _, _ ->
      assert false (* By typing. *)
@@ -242,7 +242,7 @@ and bind_pattern runtime pat v : runtime =
 and bind_args formals args runtime =
   match formals, args with
   | [], [] -> runtime
-  | _::_, [] | [], _::_ -> failwith "TODO raise mauvais arguments"
+  | _::_, [] | [], _::_ -> assert false
   | var::formals, value::args ->
      let value = expression' runtime value in
      let runtime = { runtime with
@@ -289,7 +289,7 @@ and binop
 	   match expression' runtime c with
 	   | VBool b when b = true -> t
 	   | VBool _ -> f
-	   | _ as value -> failwith (print_value value ^ " is not a bool")
+	   | _ as value -> assert false
 	 in
 	 expression' runtime expr
 
