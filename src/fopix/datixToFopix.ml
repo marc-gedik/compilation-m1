@@ -191,7 +191,7 @@ let translate (p : S.t) env =
     | S.PTuple ys ->
        toplevel_block_get pos e ys 0
 
-    | S.PTaggedValues (S.Constructor s as k, ys) ->
+    | S.PTaggedValues (S.Constructor s, ys) ->
         if s = "True" then [T.DefineValue (locate () (fresh_identifier ()), locate () fopix_true)]
 	else if s = "False" then [T.DefineValue (locate () (fresh_identifier ()), locate () fopix_false)]
 	else (toplevel_block_get pos e ys 1)
@@ -215,7 +215,7 @@ let translate (p : S.t) env =
     | S.PTuple ys ->
        block_get pos ys x e 0
 
-    | S.PTaggedValues (S.Constructor s as k, ys) ->
+    | S.PTaggedValues (S.Constructor s, ys) ->
        if s = "True" then  fopix_true
        else if s = "False" then fopix_false
        else block_get pos ys x e 1
@@ -255,11 +255,11 @@ let translate (p : S.t) env =
 
   and choose_data_representation env defs =
     match (Position.value defs) with
-    | S.DefineType (_, RecordTy l) ->
+    | S.DefineType (_, S.RecordTy l) ->
        let l = List.mapi (fun i (x,_) -> x,i) l in
        List.fold_left (fun env x -> bind_label_representation env x) env l
 
-    | S.DefineType (_, TaggedUnionTy l) ->
+    | S.DefineType (_, S.TaggedUnionTy l) ->
        let l = List.mapi (fun i (x,_) -> x,i) l in
        List.fold_left (fun env x -> bind_tag_representation env x) env l
 

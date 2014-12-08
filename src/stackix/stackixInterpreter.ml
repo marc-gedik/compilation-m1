@@ -323,12 +323,11 @@ let evaluate runtime (ast : t) =
        raise ExitNow
 
     | BlockCreate ->
-       let DInt size = Stack.get 1 values in
+       let size = Stack.get 1 values in
        let init = Stack.get 0 values in
        Stack.pop values;
        Stack.pop values;
-       Stack.push (DLocation (Memory.allocate memory size init)) values
-
+       block_create size init
 
     | BlockGet ->
        let DLocation location = Stack.get 1 values in
@@ -362,6 +361,11 @@ let evaluate runtime (ast : t) =
 
     | Comment _ ->
        ()
+
+  and block_create size init =
+    match size with
+    | DInt size -> Stack.push (DLocation (Memory.allocate memory size init)) values
+    | _ -> error (" is not an int")
 
   and jump (Label x as l) =
     let block =

@@ -289,7 +289,7 @@ and binop
 	   match expression' runtime c with
 	   | VBool b when b = true -> t
 	   | VBool _ -> f
-	   | _ as value -> assert false
+	   | _ -> assert false
 	 in
 	 expression' runtime expr
 
