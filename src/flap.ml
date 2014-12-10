@@ -28,6 +28,7 @@ and initialize_options () =
   CommandLineOptions.parse ()
 
 and initialize_languages () =
+  HopixInitialization.initialize ();
   DatixInitialization.initialize ();
   FopixInitialization.initialize ();
   StackixInitialization.initialize ()
@@ -105,7 +106,12 @@ let interactive_loop () =
 
           | input ->
             let ast = Compiler.Source.parse_string input in
-            let tenvironment = Compiler.Source.typecheck tenvironment ast in
+            let tenvironment =
+              if Options.get_unsafe () then
+                tenvironment
+              else
+                Compiler.Source.typecheck tenvironment ast
+            in
             let cast, cenvironment = Compiler.translate ast cenvironment in
             if Options.get_verbose_mode () then
               print_endline (Target.print_ast cast);
@@ -153,7 +159,10 @@ let batch_compilation () =
   let input_filename = Options.get_input_filename () in
   let module_name = Filename.chop_extension input_filename in
   let ast = Source.parse_filename input_filename in
-  ignore (Compiler.Source.(typecheck (initial_typing_environment ()) ast));
+  if Options.get_unsafe () then
+    ()
+  else
+    ignore (Compiler.Source.(typecheck (initial_typing_environment ()) ast));
   let cast, _ = Compiler.(translate ast (initial_environment ())) in
   let output_filename = module_name ^ Target.extension in
   if not (Options.get_dry_mode ()) then (

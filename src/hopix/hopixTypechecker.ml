@@ -1,6 +1,6 @@
 (** This module implements a type checker for Datix. *)
 
-open DatixAST
+open HopixAST
 
 (** Type checker error message producer. *)
 let error = Error.error "during type checking"
@@ -9,12 +9,8 @@ let error = Error.error "during type checking"
 let tyint  = TyIdentifier (TId "int")
 let tybool = TyIdentifier (TId "bool")
 
-(** A well-typed function has a signature. *)
-type signature = Signature of typ list * typ
-
 (** During typechecking, we thread an environment that contains
-    the type of variables, the signature of functions and the
-    type definitions. *)
+    the type of variables and the type definitions. *)
 module TypingEnvironment : sig
   (** The type of typing environment. *)
   type t
@@ -34,24 +30,6 @@ module TypingEnvironment : sig
       Raise {!UnboundIdentifier x} if no such variable exists. *)
   val lookup
     : t -> identifier -> typ
-
-  (** [bind_function env f s] assigns the signature [s] to [f]
-      in [env] and extends [env]. *)
-  val bind_function
-    : t -> function_identifier -> signature -> t
-
-  (** [defined_function env f] returns [true] iff [f] is bound in [env]. *)
-  val defined_function
-    : t -> function_identifier -> bool
-
-  (** [UnboundFunctionIdentifier f] is raised if [f] is unbound. *)
-  exception UnboundFunctionIdentifier of function_identifier
-
-  (** [lookup_function env f] returns the signature assigned to [f]
-      in [env]. Raise {!UnboundFunctionIdentifier f] if no such
-      [f] exists. *)
-  val lookup_function
-    : t -> function_identifier -> signature
 
   (** [bind_type_definition env t tdef] introduces a new type definition
       in [env]. *)
@@ -109,13 +87,11 @@ module TypingEnvironment : sig
 end = struct
   type t = {
     variables : (identifier * typ) list;
-    functions : (function_identifier * signature) list;
     typedefs  : (type_identifier * type_definition) list;
   }
 
   let empty = {
     variables = [];
-    functions = [];
     typedefs  = [];
   }
 
@@ -130,21 +106,6 @@ end = struct
       List.assoc x e.variables
     with Not_found ->
       raise (UnboundIdentifier x)
-
-  let bind_function e f s = { e with
-    functions = (f, s) :: e.functions
-  }
-
-  let defined_function e f =
-    List.mem_assoc f e.functions
-
-  exception UnboundFunctionIdentifier of function_identifier
-
-  let lookup_function e f =
-    try
-      List.assoc f e.functions
-    with Not_found ->
-      raise (UnboundFunctionIdentifier f)
 
   let bind_type_definition env t tdef =
     { env with typedefs = (t, tdef) :: env.typedefs }
@@ -211,21 +172,18 @@ let initial_typing_environment () =
 (** [typecheck tenv ast] checks that [ast] is a well-formed program
     under the typing environment [tenv]. *)
 let typecheck tenv ast =
+
   let rec program tenv p =
     List.fold_left definition tenv p
 
-
   and definition tenv def =
     match Position.value def with
-    | DefineValue (p, e) ->
-      define_value tenv p e
+      | DefineValue (p, e) ->
+        define_value tenv p e
 
-    | DefineFunction (f, xs, _, e) ->
-         failwith "Student! This is your job!"
-
-    | DefineType (t, tdef) ->
-      well_formed_type_definition (Position.position def) tenv tdef;
-      TypingEnvironment.bind_type_definition tenv t tdef
+      | DefineType (t, tdef) ->
+        well_formed_type_definition (Position.position def) tenv tdef;
+        TypingEnvironment.bind_type_definition tenv t tdef
 
   and well_formed_type_definition pos tenv = function
     | RecordTy ltys ->
@@ -238,53 +196,51 @@ let typecheck tenv ast =
   (** [define_value tenv p e] returns a new environment that associates
       a type to each of the variables bound by the pattern [p]. *)
   and define_value tenv p e =
-    let ty = infer_expression_type tenv e in
-    check_pattern tenv ty p
+       failwith "Student! This is your job!"
 
   (** [infer_expression_type tenv e] returns the type of the expression
       [e] under the environment [tenv] if [e] is well-typed. *)
   and infer_expression_type tenv e =
     let pos = Position.position e in
     match Position.value e with
+      | Fun (x, e) ->
+           failwith "Student! This is your job!"
+
+      | RecFuns fs ->
+           failwith "Student! This is your job!"
+
+      | Apply (a, b) ->
+           failwith "Student! This is your job!"
+
       | Literal l ->
-        infer_literal_type l
+           failwith "Student! This is your job!"
 
       | Variable x ->
-        (try
-           TypingEnvironment.lookup tenv x
-         with TypingEnvironment.UnboundIdentifier (Id x) ->
-           error
-             (Position.position e)
-             (Printf.sprintf "Identifier `%s' is unbound." x)
-        )
+           failwith "Student! This is your job!"
 
       | Define (p, e1, e2) ->
-        let tenv = define_value tenv p e1 in
-        infer_expression_type tenv e2
-
-      | FunCall (f, es) ->
            failwith "Student! This is your job!"
 
       | IfThenElse (c, te, fe) ->
            failwith "Student! This is your job!"
 
       | Tuple es ->
-        failwith "Student! This is your job!"
+           failwith "Student! This is your job!"
 
       | Record [] ->
         assert false (* By parsing. *)
 
       | Record fs ->
-        failwith "Student! This is your job!"
+           failwith "Student! This is your job!"
 
       | RecordField (e, (Label lid as l)) ->
-        failwith "Student! This is your job!"
+           failwith "Student! This is your job!"
 
       | TaggedValues (k, es) ->
-        failwith "Student! This is your job!"
+           failwith "Student! This is your job!"
 
       | Case (e, bs) ->
-        failwith "Student! This is your job!"
+           failwith "Student! This is your job!"
 
 
   (** [check_exhaustiveness pos ks bs] ensures that there is no
@@ -297,10 +253,10 @@ let typecheck tenv ast =
     | Branch (pat, _) :: bs ->
          failwith "Student! This is your job!"
 
-  (** [infer_branches tenv pty previous_branch_type (Branch (p, e))]
-      checks that the pattern [p] has type [pty] and that the type of
-      [e] (if it exists) is the same as the one of the previous
-      branch (unless this is the first branch). *)
+      (** [infer_branches tenv pty previous_branch_type (Branch (p, e))]
+          checks that the pattern [p] has type [pty] and that the type of
+          [e] (if it exists) is the same as the one of the previous
+          branch (unless this is the first branch). *)
   and infer_branches tenv pty previous_branch_type = function
     | [] ->
       begin match previous_branch_type with
@@ -330,9 +286,16 @@ let typecheck tenv ast =
       | _, _ ->
         error (Position.position pat) (
           Printf.sprintf "This pattern has not type: %s\n"
-            (DatixPrettyPrinter.(to_string typ pty))
+            (HopixPrettyPrinter.(to_string typ pty))
         )
 
+  and check_irrefutable_pattern tenv pat : unit =
+    match (Position.value pat) with
+      | PWildcard | PVariable _ | PTuple _ -> ()
+      | PTaggedValues (k, _) ->
+        let t', ktys = TypingEnvironment.lookup_tagged_union_type_from_tag tenv k in
+        if List.length ktys <> 1 then
+          error (Position.position pat) "This pattern is not irrefutable."
 
   and check_variable tenv ty x =
     TypingEnvironment.bind tenv x ty
@@ -341,9 +304,9 @@ let typecheck tenv ast =
     let ity = infer_expression_type tenv e in
     if ity <> xty then
       error (Position.position e) (
-        Printf.sprintf "Incompatible types.\n  Expected: %s\n  Inferred: %s\n"
-          (DatixPrettyPrinter.(to_string typ xty))
-          (DatixPrettyPrinter.(to_string typ ity))
+        Printf.sprintf "Incompatible types.\nExpected: %s\nInferred: %s\n"
+          (HopixPrettyPrinter.(to_string typ xty))
+          (HopixPrettyPrinter.(to_string typ ity))
       )
 
   and check_same_length : type a b. Position.t -> a list -> b list -> unit = fun pos a b ->
@@ -351,7 +314,7 @@ let typecheck tenv ast =
     if (aln <> bln) then (
       error pos
         (Printf.sprintf
-           "Invalid number of arguments.\n  Expected: %d\n  Given: %d\n"
+           "Invalid number of arguments.\nExpected: %d\nGiven: %d\n."
            aln bln
         )
     )
@@ -359,6 +322,13 @@ let typecheck tenv ast =
   and infer_literal_type = function
     | LInt _ ->
       tyint
+
+  and check_unicity
+      : type a b. Position.t -> (a * b) list -> string -> unit = fun pos ls what ->
+        let ls = List.(sort (fun (l1, _) (l2, _) -> compare l1 l2) ls) in
+        let ls = fst (List.split ls) in
+        if not (ExtStd.List.all_distinct ls) then
+          error pos (Printf.sprintf "Each %s must appear exactly once." what)
 
   in
   program tenv ast

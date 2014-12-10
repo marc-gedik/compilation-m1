@@ -58,3 +58,9 @@ let benchmark = ref true
 let set_benchmark = ( := ) benchmark
 
 let get_benchmark () = !benchmark
+
+let unsafe = ref false
+
+let set_unsafe = ( := ) unsafe
+
+let get_unsafe () = !unsafe

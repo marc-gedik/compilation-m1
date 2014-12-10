@@ -7,7 +7,14 @@ let push local_options =
   options_list := !options_list @ local_options
 
 let options names kind doc =
-  List.map (fun n -> (n, kind, doc)) names
+  let first_shot =
+    let state = ref true in
+    fun s ->
+      if !state then (state := false; s)
+      else
+        (List.hd (Str.(split (regexp " ") doc)))
+  in
+  List.map (fun n -> (n, kind, first_shot doc)) names
 
 let show_version_and_exits () =
   Printf.printf "flap %s\n%!" Version.number;
@@ -42,17 +49,17 @@ let generic_options = Arg.(align (List.flatten [
   options
     ["--verbose"; "-V"]
     (Bool Options.set_verbose_mode)
-    (" Ask the compiler to be verbose");
+    ("(true|false) Ask the compiler to be verbose");
 
   options
     ["--dry"; "-d"]
     (Bool Options.set_dry_mode)
-    (" Ask the compiler not to produce compiled file");
+    ("(true|false) Ask the compiler not to produce compiled file");
 
   options
     ["--bench"; "-B"]
     (Bool Options.set_benchmark)
-    (" Ask the compiler to show evaluation time.");
+    ("(true|false) Ask the compiler to show evaluation time.");
 
 ]))
 
