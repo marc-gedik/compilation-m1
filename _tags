@@ -1,8 +1,8 @@
-true : package(pprint), package(unix)
+true : package(pprint), package(unix), package(str)
 
 <src/common>    : include
 <src/utilities> : include
-<src/hopix>     : include
 <src/datix>     : include
 <src/fopix>     : include
 <src/stackix>   : include
+<src/hopix>     : include

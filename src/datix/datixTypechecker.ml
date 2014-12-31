@@ -428,6 +428,7 @@ let typecheck tenv ast =
 			      (DatixPrettyPrinter.(to_string typ pty))
              )
 
+
   and check_variable tenv ty x =
     TypingEnvironment.bind tenv x ty
 
@@ -435,21 +436,19 @@ let typecheck tenv ast =
     let ity = infer_expression_type tenv e in
     if ity <> xty then
       error (Position.position e) (
-              Printf.sprintf "Incompatible types.\nExpected: %s\nInferred: %s\n"
-			     (DatixPrettyPrinter.(to_string typ xty))
-			     (DatixPrettyPrinter.(to_string typ ity))
-	    )
+        Printf.sprintf "Incompatible types.\n  Expected: %s\n  Inferred: %s\n"
+          (DatixPrettyPrinter.(to_string typ xty))
+          (DatixPrettyPrinter.(to_string typ ity))
+      )
 
-  and check_same_length :
-type a b. Position.t -> a list -> b list -> unit =
-    fun pos a b ->
+  and check_same_length : type a b. Position.t -> a list -> b list -> unit = fun pos a b ->
     let aln = List.length a and bln = List.length b in
     if (aln <> bln) then (
       error pos
-	    (Printf.sprintf
-	       "Invalid number of arguments.\nExpected: %d\nGiven: %d\n."
-	       aln bln
-	    )
+        (Printf.sprintf
+           "Invalid number of arguments.\n  Expected: %d\n  Given: %d\n"
+           aln bln
+        )
     )
 
  and infer_literal_type = function
