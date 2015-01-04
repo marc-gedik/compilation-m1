@@ -117,10 +117,44 @@ type observable = {
   new_environment : Environment.t;
 }
 
+let arith_operator_of_symbol = function
+  | "+" -> ( + )
+  | "-" -> ( - )
+  | "/" -> ( / )
+  | "*" -> ( * )
+  | _ -> assert false
+let cmp_operator_of_symbol = function
+  | "<"  -> ( < )
+  | ">"  -> ( > )
+  | "<=" -> ( <= )
+  | ">=" -> ( >= )
+  | "="  -> ( = )
+  | _ -> assert false
+
+
 (** [primitives] is an environment that contains the implementation
     of all primitives (+, <, ...). *)
 let primitives =
-     failwith "Student! This is your job!"
+  let arith_operators = ["+"; "-"; "/"; "*"] in
+  let cmp_operators   = ["<"; ">"; "<="; ">="; "="] in
+
+
+  let int_int_int f = primitive value_as_int
+			    (primitive value_as_int int_as_value)
+			    f
+  in
+  let int_int_bool f = primitive value_as_int
+			    (primitive value_as_int bool_as_value)
+			    f
+  in
+  let env = Environment.empty in
+  let env = List.fold_left
+	      (fun env x -> Environment.bind env (Id x) (int_int_int (arith_operator_of_symbol x)))
+	      env arith_operators in
+  let env = List.fold_left
+	      (fun env x -> Environment.bind env (Id x) (int_int_bool (cmp_operator_of_symbol x)))
+	      env cmp_operators in
+  env
 
 let initial_runtime () = {
   environment = primitives;
@@ -138,57 +172,67 @@ let rec evaluate runtime ast =
 and declaration runtime d =
   match Position.value d with
   | DefineValue (pat, e) ->
-       failwith "Student! This is your job!"
+     bind_pattern runtime pat (expression' runtime e)
 
   | DefineType _ ->
-       failwith "Student! This is your job!"
+     runtime
 
 and expression' runtime e =
   expression (position e) runtime (value e)
 
 and expression position runtime = function
   | Fun (x, e) ->
-       failwith "Student! This is your job!"
+       failwith "Student! This is your job!26"
 
   | Apply (a, b) ->
-       failwith "Student! This is your job!"
+       failwith "Student! This is your job!27"
 
   | RecFuns fs ->
-       failwith "Student! This is your job!"
+       failwith "Student! This is your job!28"
 
   | RecordField (e, l) ->
-    failwith "Student! This is your job!"
+     let VRecord recs = expression' runtime e in
+     let value = List.assoc l recs in
+     value
 
   | Tuple es ->
-    failwith "Student! This is your job!"
+     let values = List.map (expression' runtime) es in
+     VTuple values
 
   | Record rs ->
-    failwith "Student! This is your job!"
+     let recs = List.map (fun (x,y) -> (x,(expression' runtime y))) rs in
+     VRecord recs
 
   | TaggedValues (k, es) ->
-    failwith "Student! This is your job!"
+     let values = List.map (expression' runtime) es in
+     VTagged (k,values)
 
   | Case (e, bs) ->
-       failwith "Student! This is your job!"
+     branches runtime (expression' runtime e) bs
 
   | Literal l ->
-       failwith "Student! This is your job!"
+     literal l
 
   | Variable x ->
-       failwith "Student! This is your job!"
+     Environment.lookup x runtime.environment
 
   | Define (pat, ex, e) ->
-       failwith "Student! This is your job!"
+     let v = expression' runtime ex in
+     expression' (bind_pattern runtime pat v) e
 
   | IfThenElse (c, t, f) ->
-    failwith "Student! This is your job!"
+     ifThenElse runtime c t f
 
 and branches runtime v = function
   | [] ->
-    failwith "Student! This is your job!"
+       assert false (* by typing *)
 
   | Branch (pat, e) :: bs ->
-    failwith "Student! This is your job!"
+         (try
+	 let runtime = bind_pattern runtime pat v in
+	 expression' runtime e
+       with _ -> branches runtime v bs
+     )
 
 and bind_variable runtime x v =
   { environment = Environment.bind runtime.environment x v }
@@ -196,16 +240,18 @@ and bind_variable runtime x v =
 and bind_pattern runtime pat v : runtime =
   match Position.value pat, v with
     | PWildcard, _ ->
-      failwith "Student! This is your job!"
+      runtime
 
     | PVariable x, _ ->
-      failwith "Student! This is your job!"
+       bind_variable runtime x v
 
     | PTuple xs, VTuple vs ->
-      failwith "Student! This is your job!"
+       List.fold_left2 bind_variable runtime xs vs
 
     | PTaggedValues (k, xs), VTagged (k', vs) ->
-      failwith "Student! This is your job!"
+       if k = k'
+       then List.fold_left2 bind_variable runtime xs vs
+       else failwith ("Tag are not the same" ^ (tag k) ^ " vs " ^ (tag k'))
 
     | _, _ ->
       assert false (* By typing. *)
@@ -227,6 +273,15 @@ and extract_observable runtime runtime' =
     new_environment =
       substract Environment.empty runtime.environment runtime'.environment
   }
+
+and ifThenElse runtime c t f =
+  let expr =
+    match expression' runtime c with
+    | VBool b when b = true -> t
+    | VBool _ -> f
+    | _ -> assert false
+  in
+  expression' runtime expr
 
 let print_observable runtime observation =
   Environment.print observation.new_environment
