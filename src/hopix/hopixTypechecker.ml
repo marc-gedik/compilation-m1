@@ -165,9 +165,35 @@ end
 
 type typing_environment = TypingEnvironment.t
 
+let bind_binop tenv l typ ret =
+  List.fold_left
+    (fun tenv x -> TypingEnvironment.bind tenv (Id x) (TyArrow (typ, (TyArrow (typ, ret)))))
+    tenv l
+
 (** The initial environment contains the type of the primitive functions. *)
 let initial_typing_environment () =
-     failwith "Student! This is your job!"
+  let tenv = TypingEnvironment.empty in
+  let tenv = TypingEnvironment.bind_type_definition
+	       tenv (TId "bool") (TaggedUnionTy [Constructor "True", []; Constructor "False", []]) in
+  let tenv = bind_binop tenv ["+"; "-"; "*"; "/"] tyint tyint in
+  let tenv = bind_binop tenv ["<"; "<="; ">"; ">="; "="] tyint tybool in
+  tenv
+
+let is_bool c =
+   c = tybool || c = (TyIdentifier (TId "bool"))
+
+let check_record_label pos l fs =
+  let rec aux l fs =
+    match l,fs with
+    | [], [] -> ()
+    | (lb1,_)::l, (lb2,_)::fs ->
+       if lb1 = lb2
+       then aux l fs
+       else error pos "Unbound record field"
+    | [], (lb, _)::l -> error pos "Unbound record field"
+    | _, [] ->  error pos "Some record fields are undefined"
+  in
+  aux l fs
 
 (** [typecheck tenv ast] checks that [ast] is a well-formed program
     under the typing environment [tenv]. *)
@@ -187,16 +213,18 @@ let typecheck tenv ast =
 
   and well_formed_type_definition pos tenv = function
     | RecordTy ltys ->
-         failwith "Student! This is your job!"
+       (* failwith "Student! This is your job!1" *)
+       ()
 
     | TaggedUnionTy ktys ->
-         failwith "Student! This is your job!"
+       (* failwith "Student! This is your job!2" *)
+       ()
 
 
   (** [define_value tenv p e] returns a new environment that associates
       a type to each of the variables bound by the pattern [p]. *)
   and define_value tenv p e =
-       failwith "Student! This is your job!"
+       failwith "Student! This is your job!3"
 
   (** [infer_expression_type tenv e] returns the type of the expression
       [e] under the environment [tenv] if [e] is well-typed. *)
@@ -204,43 +232,83 @@ let typecheck tenv ast =
     let pos = Position.position e in
     match Position.value e with
       | Fun (x, e) ->
-           failwith "Student! This is your job!"
+           failwith "Student! This is your job!4"
 
       | RecFuns fs ->
-           failwith "Student! This is your job!"
+           failwith "Student! This is your job!5"
 
       | Apply (a, b) ->
-           failwith "Student! This is your job!"
+           failwith "Student! This is your job!6"
 
       | Literal l ->
-           failwith "Student! This is your job!"
+         infer_literal_type l
 
       | Variable x ->
-           failwith "Student! This is your job!"
+         (try
+             TypingEnvironment.lookup tenv x
+           with TypingEnvironment.UnboundIdentifier (Id x) ->
+             error
+               (Position.position e)
+               (Printf.sprintf "Identifier `%s' is unbound." x)
+	 )
 
       | Define (p, e1, e2) ->
-           failwith "Student! This is your job!"
+         let tenv = define_value tenv p e1 in
+	 infer_expression_type tenv e2
 
       | IfThenElse (c, te, fe) ->
-           failwith "Student! This is your job!"
+         let c = infer_expression_type tenv c in
+	 let b = is_bool c in
+	 if b
+	 then
+	   begin
+	     let te = infer_expression_type tenv te in
+	     let fe = infer_expression_type tenv fe in
+	     if te = fe
+	     then te
+	     else error pos "Not same type"
+           end
+	 else
+	   error pos "Not a boolean"
 
       | Tuple es ->
-           failwith "Student! This is your job!"
+         let typs = List.map (infer_expression_type tenv) es in
+	 TyTuple typs
 
       | Record [] ->
         assert false (* By parsing. *)
 
       | Record fs ->
-           failwith "Student! This is your job!"
+         let t,l = TypingEnvironment.lookup_recordtype_from_label tenv (fst (List.hd fs))
+	 in
+	 let fs = List.sort compare fs in
+	 let l  = List.sort compare l  in
+	 check_record_label pos l fs;
+	 TyIdentifier t
 
       | RecordField (e, (Label lid as l)) ->
-           failwith "Student! This is your job!"
+         let id =
+	   match infer_expression_type tenv e with
+	   | TyIdentifier id -> id
+	   | _ -> error pos "Not a record"
+	 in
+	 let typs = TypingEnvironment.lookup_recordtype tenv id in
+	 List.assoc l typs
 
       | TaggedValues (k, es) ->
-           failwith "Student! This is your job!"
+         let id, union = TypingEnvironment.lookup_tagged_union_type_from_tag tenv k in
+	 let typs = List.assoc k union in
+	 check_same_length pos es typs;
+	 List.iter2 (fun e typ -> if (infer_expression_type tenv e) <> typ
+				  then error pos "Error in args"
+				  else ())
+		    es
+		    typs;
+	 TyIdentifier id
 
       | Case (e, bs) ->
-           failwith "Student! This is your job!"
+         let etyp = infer_expression_type tenv e in
+	 infer_branches tenv etyp None bs
 
 
   (** [check_exhaustiveness pos ks bs] ensures that there is no
@@ -249,9 +317,9 @@ let typecheck tenv ast =
       branches [bs]. *)
   and check_exhaustiveness pos ks = function
     | [] ->
-         failwith "Student! This is your job!"
+         failwith "Student! This is your job!16"
     | Branch (pat, _) :: bs ->
-         failwith "Student! This is your job!"
+         failwith "Student! This is your job!17"
 
       (** [infer_branches tenv pty previous_branch_type (Branch (p, e))]
           checks that the pattern [p] has type [pty] and that the type of
@@ -264,7 +332,15 @@ let typecheck tenv ast =
         | Some ty -> ty
       end
     | Branch (pat, e) :: bs ->
-         failwith "Student! This is your job!"
+       let tenv = check_pattern tenv pty pat in
+       let etyp = infer_expression_type tenv e in
+       begin
+	 match previous_branch_type with
+         | None -> infer_branches tenv pty (Some etyp) bs
+         | Some ty -> if etyp = ty
+		      then infer_branches tenv pty (Some ty) bs
+		      else error (Position.dummy) "Different type"
+       end
 
   (** [check_pattern tenv pty pat] checks that [pat] can be assigned
       the type [pty] and, if so, returns an extension of [tenv] with
@@ -272,16 +348,20 @@ let typecheck tenv ast =
   and check_pattern tenv pty pat =
     match Position.value pat, pty with
       | PVariable x, _ ->
-           failwith "Student! This is your job!"
+         check_variable tenv pty x
 
       | PTuple xs, TyTuple tys ->
-           failwith "Student! This is your job!"
+         check_same_length (Position.position pat) xs tys;
+	 List.fold_left2 check_variable tenv tys xs
 
       | PWildcard, _ ->
-           failwith "Student! This is your job!"
+         tenv
 
       | PTaggedValues (k, xs), TyIdentifier t ->
-           failwith "Student! This is your job!"
+         let union = TypingEnvironment.lookup_tagged_union_type tenv t in
+	 let typs  = List.assoc k union in
+	 check_same_length (Position.position pat) xs typs;
+	 List.fold_left2 check_variable tenv typs xs
 
       | _, _ ->
         error (Position.position pat) (
