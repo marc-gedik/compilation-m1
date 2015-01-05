@@ -147,7 +147,7 @@ and declaration env = function
     instructions that *does not* start with a label. *)
 and expression pos env = function
   | Source.AST.Literal l ->
-    single_instruction (literal l)
+    single_instruction (literal env l)
 
   | Source.AST.Variable (Source.AST.Id x as i) ->
     let idx = ExtStd.List.index_of (( = ) i) env.variables in
@@ -173,7 +173,7 @@ and expression pos env = function
   | Source.AST.FunCall (f, actuals) ->
     failwith "Student! This is your job!"
 
-and literal = function
+and literal env = function
   | Source.AST.LInt x -> Target.AST.Remember x
 
 and expression' env e =

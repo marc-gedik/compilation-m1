@@ -23,6 +23,9 @@ let parse_string =
 let print_ast ast =
   HopixPrettyPrinter.(to_string program ast)
 
+let print_expression e =
+  HopixPrettyPrinter.(to_string expression e)
+
 include HopixInterpreter
 
 include HopixTypechecker

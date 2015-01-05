@@ -19,7 +19,7 @@ let blank   = [' ' '\009' '\012']
 
 let digit = ['0'-'9']
 
-let lowercase_alpha = ['a'-'z']
+let lowercase_alpha = ['_' 'a'-'z']
 
 let uppercase_alpha = ['A'-'Z']
 
@@ -49,6 +49,7 @@ rule token = parse
   | "eval"          { EVAL }
   | "case"          { CASE }
   | "with"          { WITH }
+  | "mutate"        { MUTATE }
 
   (** Literals *)
   | digit+ as d     { INT (int_of_string d) }
@@ -70,9 +71,11 @@ rule token = parse
   | "<"             { LT         }
   | "<="            { LTE        }
   | "->"            { RIGHTARROW }
+  | "&"             { UPPERSAND  }
 
   (** Symbols *)
   | "_"             { UNDERSCORE }
+  | "?"             { QMARK     }
 
   (** Punctuation *)
   | ","             { COMMA     }
@@ -82,6 +85,8 @@ rule token = parse
   | "}"             { RBRACE    }
   | "("             { LPAREN    }
   | ")"             { RPAREN    }
+  | "["             { LBRACKET  }
+  | "]"             { RBRACKET  }
   | eof             { EOF       }
 
   (** Lexing error. *)
