@@ -4,8 +4,9 @@ open PPrintEngine
 
 open HopixAST
 
-let ( ++ ) x y =
-  x ^^ break 1 ^^ y
+let int i = string (string_of_int i)
+
+let ( ++ ) x y = x ^^ break 1 ^^ y
 
 let located f x = f (Position.value x)
 
@@ -156,6 +157,7 @@ and expression = function
     string "fix"
     ++ separate_map (break 1 ++ string "and" ^^ break 1) recfun fs
     ++ string "end"
+
 
 and recfun (fty, e) =
   group (typed_identifier (Position.value fty) ++ string "=" ++ expression' e)

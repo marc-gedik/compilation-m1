@@ -25,6 +25,9 @@ and expression =
   | IfThenElse of expression located * expression located * expression located
   | Case of expression located * branch list
 
+  (* Only appears in the image of closure conversion. *)
+  | MutateTuple of expression located * int * expression located
+
 and lambda = typed_identifier * expression located
 
 and typed_identifier = identifier * typ option
@@ -72,6 +75,17 @@ module VariableSet = Set.Make (struct
     let compare (Id s1) (Id s2) = String.compare s1 s2
 end)
 
+let seq e1 e2 =
+  Position.map (fun _ -> Define (Position.map (fun _ -> PWildcard) e1, e1, e2)) e1
+
+let rec seqs = function
+  | [] -> assert false (* By precondition. *)
+  | [e] -> e
+  | e1 :: e2 -> seq e1 (seqs e2)
+
+let is_binary_primitive = function
+  | "+" | "-" | "*" | "/" | "<" | ">" | "<=" | ">=" | "=" -> true
+  | _ -> false
 
 let free_variables : expression -> identifier list =
      failwith "Student! This is your job!"

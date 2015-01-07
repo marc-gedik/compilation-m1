@@ -10,9 +10,10 @@ let error positions msg =
 type value =
   | VInt      of int
   | VBool     of bool
-  | VTuple    of value list
+  | VTuple     of value list
   | VRecord   of (label * value) list
   | VTagged   of tag * value list
+  | VFun of function_identifier
 
 type 'a coercion = value -> 'a option
 let value_as_int      = function VInt x -> Some x | _ -> None
@@ -28,19 +29,38 @@ let record_as_value x = VRecord x
 let tagged_as_value t x = VTagged (t, x)
 let tuple_as_value ts = VTuple ts
 
-let rec print_value = function
-  | VInt x          -> string_of_int x
-  | VBool true      -> "true"
-  | VBool false     -> "false"
-  | VTuple vs       -> "(" ^ String.concat ", " (List.map print_value vs) ^ ")"
-  | VRecord r       -> "{" ^ String.concat "; " (List.map print_field r) ^ "}"
-  | VTagged (t, vs) -> tag t ^ "(" ^ String.concat ", " (List.map print_value vs) ^ ")"
+let print_value v =
 
-and print_field (Label l, v) =
-  l ^ " = " ^ print_value v
+  let max_print_depth = 10 in
 
-and tag (Constructor id) =
-  id
+  let rec print_value d v =
+    if d = max_print_depth then "..."
+    else match v with
+      | VInt x          ->
+        string_of_int x
+      | VBool true      ->
+        "true"
+      | VBool false     ->
+        "false"
+      | VTuple vs       ->
+        "(" ^ String.concat ", " (List.map (print_component (d + 1)) vs) ^ ")"
+      | VRecord r       ->
+        "{" ^ String.concat "; " (List.map (print_field (d + 1)) r) ^ "}"
+      | VTagged (t, vs) ->
+        tag t ^ "(" ^ String.concat ", " (List.map (print_value (d + 1)) vs) ^ ")"
+      | VFun (FunId f)  ->
+        f
+
+  and print_component d v =
+       print_value d v
+
+  and print_field d (Label l, v) =
+    l ^ " = " ^ print_value d v
+
+  and tag (Constructor id) =
+    id
+  in
+  print_value 0 v
 
 module Environment : sig
   type t
@@ -201,6 +221,7 @@ and expression position runtime = function
 
   | IfThenElse (c, t, f) ->
      ifThenElse runtime c t f
+
 
 
 

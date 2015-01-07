@@ -23,6 +23,9 @@ let parse_string =
 let print_ast ast =
   DatixPrettyPrinter.(to_string program ast)
 
+let print_expression ast =
+  DatixPrettyPrinter.(to_string expression ast)
+
 include DatixInterpreter
 
 include DatixTypechecker

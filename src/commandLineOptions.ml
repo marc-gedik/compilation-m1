@@ -57,6 +57,11 @@ let generic_options = Arg.(align (List.flatten [
     ("(true|false) Ask the compiler not to produce compiled file");
 
   options
+    ["--unsafe"; "-u"]
+    (Bool Options.set_unsafe)
+    ("(true|false) Ask the compiler not to typecheck");
+
+  options
     ["--bench"; "-B"]
     (Bool Options.set_benchmark)
     ("(true|false) Ask the compiler to show evaluation time.");

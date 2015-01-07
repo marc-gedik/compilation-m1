@@ -172,7 +172,12 @@ let batch_compilation () =
   );
   if Options.get_running_mode () then Compiler.Target.(
     ignore (
-      eval (initial_runtime ()) (fun r -> evaluate r cast) print_observable
+      try
+        eval (initial_runtime ()) (fun r -> evaluate r cast) print_observable
+      with
+        | e ->
+          print_endline (Printexc.to_string e);
+          exit 1
     )
   )
 

@@ -4,6 +4,9 @@ open PPrintEngine
 
 open DatixAST
 
+let int x =
+  string (string_of_int x)
+
 let ( ++ ) x y =
   x ^^ break 1 ^^ y
 
@@ -127,7 +130,9 @@ and expression = function
     ++ group (located expression e2)
     ++ string "end"
   | Tuple es ->
-    PPrintOCaml.tuple (List.map expression' es)
+    string "[" ++
+    separate_map (string "," ++ break 0) expression' es
+    ++ string "]"
   | TaggedValues (t, es) ->
     tag t ++ PPrintOCaml.tuple (List.map expression' es)
   | Case (e, bs) ->
@@ -136,6 +141,14 @@ and expression = function
       ++ separate_map (break 0) branch bs
     )
     ++ string "end"
+
+  | MutateTuple (e, i, v) ->
+    string "mutate"
+    ++ PPrintOCaml.tuple (int i :: List.map expression' [e; v])
+
+  | UnknownFunCall (e, es) ->
+    string "?" ++ parens (expression' e)
+    ++ PPrintOCaml.tuple (List.map expression' es)
 
 and field (l, e) =
   group (label l ++ string "=" ++ expression' e)
@@ -155,6 +168,7 @@ and funcall f es =
 
 and literal = function
   | LInt x -> string (string_of_int x)
+  | LFun (FunId f) -> string ("&" ^ f)
 
 let to_string f x =
   let b = Buffer.create 13 in

@@ -41,11 +41,14 @@ let rec print_value = function
   | VInt x          -> string_of_int x
   | VBool true      -> "true"
   | VBool false     -> "false"
-  | VTuple vs       -> "(" ^ String.concat ", " (List.map print_value vs) ^ ")"
+  | VTuple vs       -> "(" ^ String.concat ", " (List.map print_component vs) ^ ")"
   | VRecord r       -> "{" ^ String.concat "; " (List.map print_field r) ^ "}"
   | VTagged (t, vs) -> tag t ^ "(" ^ String.concat ", " (List.map print_value vs) ^ ")"
   | VClosure (_, _)
   | VPrimitive _    -> "<fun>"
+
+and print_component v =
+  print_value v
 
 and print_field (Label l, v) =
   l ^ " = " ^ print_value v
@@ -222,6 +225,7 @@ and expression position runtime = function
 
   | IfThenElse (c, t, f) ->
      ifThenElse runtime c t f
+
 
 and branches runtime v = function
   | [] ->
