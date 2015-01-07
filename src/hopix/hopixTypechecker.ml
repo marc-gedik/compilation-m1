@@ -224,7 +224,8 @@ let typecheck tenv ast =
   (** [define_value tenv p e] returns a new environment that associates
       a type to each of the variables bound by the pattern [p]. *)
   and define_value tenv p e =
-       failwith "Student! This is your job!3"
+    let ty = infer_expression_type tenv e in
+    check_pattern tenv ty p
 
   (** [infer_expression_type tenv e] returns the type of the expression
       [e] under the environment [tenv] if [e] is well-typed. *)
