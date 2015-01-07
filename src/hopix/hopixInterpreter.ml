@@ -37,24 +37,38 @@ let primitive ?(error = fun () -> assert false) coercion wrapper f =
       | Some x -> wrapper (f x)
   )
 
-let rec print_value = function
-  | VInt x          -> string_of_int x
-  | VBool true      -> "true"
-  | VBool false     -> "false"
-  | VTuple vs       -> "(" ^ String.concat ", " (List.map print_component vs) ^ ")"
-  | VRecord r       -> "{" ^ String.concat "; " (List.map print_field r) ^ "}"
-  | VTagged (t, vs) -> tag t ^ "(" ^ String.concat ", " (List.map print_value vs) ^ ")"
-  | VClosure (_, _)
-  | VPrimitive _    -> "<fun>"
+let print_value v =
+  let max_depth = 20 in
 
-and print_component v =
-  print_value v
+  let rec print_value d v =
+    if d >= max_depth then "..." else
+      match v with
+        | VInt x          ->
+          string_of_int x
+        | VBool true      ->
+          "true"
+        | VBool false     ->
+          "false"
+        | VTuple vs       ->
+          "(" ^ String.concat ", " (List.map (print_component (d + 1)) vs) ^ ")"
+        | VRecord r       ->
+          "{" ^ String.concat "; " (List.map (print_field (d + 1)) r) ^ "}"
+        | VTagged (t, vs) ->
+          tag t ^ "(" ^ String.concat ", " (List.map (print_value (d + 1)) vs) ^ ")"
+        | VClosure (_, _)
+        | VPrimitive _    ->
+          "<fun>"
 
-and print_field (Label l, v) =
-  l ^ " = " ^ print_value v
+  and print_component d v =
+     print_value d v
 
-and tag (Constructor id) =
-  id
+  and print_field d (Label l, v) =
+    l ^ " = " ^ print_value d v
+
+  and tag (Constructor id) =
+    id
+  in
+  print_value 0 v
 
 module Environment : sig
   type t

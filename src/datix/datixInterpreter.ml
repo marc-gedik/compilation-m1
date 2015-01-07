@@ -29,13 +29,18 @@ let record_as_value x = VRecord x
 let tagged_as_value t x = VTagged (t, x)
 let tuple_as_value ts = VTuple ts
 
-let print_value v =
+let print_value v_root =
 
-  let max_print_depth = 10 in
+  let marks = ref [] in
+  let mark v = marks := v :: !marks in
+  let seen v = List.memq v !marks in
+
+  let max_depth = 20 in
 
   let rec print_value d v =
-    if d = max_print_depth then "..."
-    else match v with
+    if seen v || d > max_depth then "..." else (
+      mark v;
+      match v with
       | VInt x          ->
         string_of_int x
       | VBool true      ->
@@ -50,6 +55,7 @@ let print_value v =
         tag t ^ "(" ^ String.concat ", " (List.map (print_value (d + 1)) vs) ^ ")"
       | VFun (FunId f)  ->
         f
+    )
 
   and print_component d v =
        print_value d v
@@ -60,7 +66,7 @@ let print_value v =
   and tag (Constructor id) =
     id
   in
-  print_value 0 v
+  print_value 0 v_root
 
 module Environment : sig
   type t

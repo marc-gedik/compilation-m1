@@ -15,6 +15,15 @@ src/utilities/syntacticAnalysis.mli
 src/utilities/extStd.ml
 src/utilities/error.mli
 src/utilities/error.ml
+src/hopix
+src/hopix/hopixAST.ml
+src/hopix/hopixInitialization.ml
+src/hopix/hopixInterpreter.ml
+src/hopix/hopixLexer.mll
+src/hopix/hopix.ml
+src/hopix/hopixParser.mly
+src/hopix/hopixPrettyPrinter.ml
+src/hopix/hopixTypechecker.ml
 src/datix
 src/datix/datixParser.mly
 src/datix/datixAST.ml
@@ -24,6 +33,7 @@ src/datix/datixLexer.mll
 src/datix/datix.ml
 src/datix/datixPrettyPrinter.ml
 src/datix/datixInterpreter.ml
+src/datix/hopixToDatix.ml
 src/.depend
 src/version.ml
 src/common

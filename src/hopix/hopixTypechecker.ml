@@ -115,7 +115,8 @@ end = struct
   let lookup_type_definition env t =
     try
       List.assoc t env.typedefs
-    with Not_found -> raise (UnboundTypeIdentifier t)
+    with Not_found ->
+      raise (UnboundTypeIdentifier t)
 
   exception NotRecordType of type_identifier
 
@@ -182,7 +183,8 @@ let typecheck tenv ast =
         define_value tenv p e
 
       | DefineType (t, tdef) ->
-        well_formed_type_definition (Position.position def) tenv tdef;
+        let tenv' = TypingEnvironment.bind_type_definition tenv t (TaggedUnionTy []) in
+        well_formed_type_definition (Position.position def) tenv' tdef;
         TypingEnvironment.bind_type_definition tenv t tdef
 
   and well_formed_type_definition pos tenv = function
