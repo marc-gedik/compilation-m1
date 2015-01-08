@@ -184,14 +184,32 @@ and expression' runtime e =
   expression (position e) runtime (value e)
 
 and expression position runtime = function
+  | MutateTuple _ ->
+     failwith "MutateTuple fail"
+
   | Fun (x, e) ->
-       failwith "Student! This is your job!26"
+     VClosure (runtime.environment, (x, e))
 
   | Apply (a, b) ->
-       failwith "Student! This is your job!27"
+     let a = expression' runtime a in
+     let b = expression' runtime b in
+     (match a with
+      | VClosure(env, (x, e)) ->
+	 let env = Environment.bind env (fst x) b in
+	 let runtime' = { environment = env } in
+	 expression' runtime' e
+      | VPrimitive f -> f b
+      | _ -> assert false
+     )
 
   | RecFuns fs ->
-       failwith "Student! This is your job!28"
+     let fs = List.map (fun (x, e) -> (fst (Position.value x), e)) fs in
+    let environment = List.fold_left (fun env (f, _) ->
+        Environment.bind env f (VBool true)) runtime.environment fs in
+    let runtime = {environment} in
+    let fcs = List.(map (expression' runtime) (snd (split fs))) in
+    List.iter2 (fun (f, _) fc -> Environment.update f environment fc) fs fcs;
+    VTuple fcs
 
   | RecordField (e, l) ->
      let VRecord recs = expression' runtime e in
