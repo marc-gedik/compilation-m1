@@ -54,6 +54,10 @@ rule token = parse
   (** Literals *)
   | digit+ as d     { INT (int_of_string d) }
 
+  (** Symbols *)
+  | "_"             { UNDERSCORE }
+  | "?"             { QMARK     }
+
   (** Identifiers *)
   | identifier as i  { ID i  }
   | uidentifier as i { UID i }
@@ -72,10 +76,6 @@ rule token = parse
   | "<="            { LTE        }
   | "->"            { RIGHTARROW }
   | "&"             { UPPERSAND  }
-
-  (** Symbols *)
-  | "_"             { UNDERSCORE }
-  | "?"             { QMARK     }
 
   (** Punctuation *)
   | ","             { COMMA     }
