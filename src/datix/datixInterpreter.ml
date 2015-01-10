@@ -29,6 +29,9 @@ let record_as_value x = VRecord x
 let tagged_as_value t x = VTagged (t, x)
 let tuple_as_value ts = VTuple ts
 
+let tag (Constructor id) =
+    id
+
 let print_value v =
 
   let max_print_depth = 10 in
@@ -57,8 +60,6 @@ let print_value v =
   and print_field d (Label l, v) =
     l ^ " = " ^ print_value d v
 
-  and tag (Constructor id) =
-    id
   in
   print_value 0 v
 
