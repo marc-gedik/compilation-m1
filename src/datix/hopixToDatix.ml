@@ -128,12 +128,9 @@ let closure_conversion : HopixAST.t -> HopixAST.t =
     let rec program p =
       List.map (located definition) p
 
-    and pattern p =
-      failwith  "pattern"
-
     and definition pos = function
       | DefineValue (p, e) ->
-	 failwith "Student! This is your job!52"
+	 DefineValue (p, e)
 
       | DefineType (tid, tdef) ->
 	 failwith "Student! This is your job!47"
@@ -148,18 +145,22 @@ let closure_conversion : HopixAST.t -> HopixAST.t =
       into a compiled expression [e]. If [e] is inside the
       body of a function then [env] is not empty and contains
       the compiled code for the identifier occurring in [e]. *)
-    and expression_aux env pos = function
+    and expression_aux env pos =
+      let locate = Position.with_pos pos in
+      function
       | MutateTuple _ ->
 	 failwith "Student! This is your job!52"
 
-      | Literal (LInt l) ->
-	 failwith "Student! This is your job!52"
+      | Literal l ->
+	 locate (Literal l)
 
-      | Variable (Id x) ->
-	 failwith "Student! This is your job!52"
+      | Variable x ->
+	 locate (Variable x)
 
       | Define (p, e1, e2) ->
-	 failwith "Student! This is your job!52"
+	 let e1 = expression' env e1 in
+	 let e2 = expression' env e2 in
+	 locate (Define (p, e1, e2))
 
       | Tuple es ->
 	 failwith "Student! This is your job!52"
@@ -180,13 +181,14 @@ let closure_conversion : HopixAST.t -> HopixAST.t =
 	 failwith "Student! This is your job!56"
 
       | Apply (e1, e2) as e ->
-	 failwith "Student! This is your job!"
+	 failwith "Student! This is your job!57"
 
       | Fun ((x, ty), e) as l ->
 	 failwith "Student! This is your job!58"
 
       | RecFuns rfs ->
-	 failwith "Student! This is your job!"
+	 failwith "Student! This is your job!59"
+
     (**
 
           rec f0 = fun y1 -> e1 and ... and fN = fun yN -> eN
@@ -259,73 +261,98 @@ let hoist : HopixAST.t -> DatixAST.t =
     let pos = Position.position e in
     match Position.value e with
     | S.DefineValue (p, e) ->
-       failwith "Student! This is your job!"
+       let p = pattern p in
+       let e = expression e in
+       [locate pos (T.DefineValue (p, e))]
 
     | S.DefineType (tid, tdef) ->
-       failwith "Student! This is your job!"
+       []
 
   and expression e =
-    expression_aux e
+    expression_aux (Position.position e) (Position.value e)
 
   (** [expression_aux pos e] translates an expression [e]
       into a compiled expression [e]. *)
-  and expression_aux pos = function
-    | S.Literal l ->
-       failwith "Student! This is your job!"
+  and expression_aux pos e =
+    let aux = function
+      | S.Literal l ->
+	 T.Literal (literal l)
 
-    | S.Variable (S.Id x) ->
-       failwith "Student! This is your job!"
+      | S.Variable (S.Id x) ->
+	 T.Variable (T.Id x)
 
-    | S.Define (p, e1, e2) ->
-       failwith "Student! This is your job!"
-
-    | S.Tuple es ->
-       failwith "Student! This is your job!"
-
-    | S.Record rs ->
-       failwith "Student! This is your job!"
-
-    | S.RecordField (e, S.Label f) ->
-       failwith "Student! This is your job!"
-
-    | S.TaggedValues (S.Constructor k, es) ->
-       failwith "Student! This is your job!"
-
-    | S.IfThenElse (a, b, c) ->
-       failwith "Student! This is your job!"
-
-    | S.Case (e, bs) ->
-       failwith "Student! This is your job!"
-
-    | S.Apply (e1, e2) as e ->
-       failwith "Student! This is your job!"
-
-    | S.Fun ((env, _), e) ->
-       failwith "Student! This is your job!"
-
-    | S.RecFuns rfs ->
-       failwith "Student! This is your job!"
+      | S.Define (p, e1, e2) ->
+	 let p = pattern p in
+	 let e1 = expression e1 in
+	 let e2 = expression e2 in
+	 T.Define (p, e1, e2)
 
 
-  and literal = function
-    | S.LInt l ->
-       T.LInt l
+      | S.Tuple es ->
+	 T.Tuple (List.map expression es)
 
-  and branch (S.Branch (p, e)) =
-    failwith "Student! This is your job!"
+      | S.Record rs ->
+	 let rs = List.map (fun (S.Label lbl, e) -> T.Label lbl, expression e) rs in
+	 T.Record rs
 
-  and pattern pos p =
-    failwith "Student! This is your job!"
+      | S.RecordField (e, S.Label f) ->
+	 let e = expression e in
+	 T.RecordField (e, T.Label f)
 
-  and identifier (S.Id x) = T.Id x
+      | S.TaggedValues (S.Constructor k, es) ->
+	 let es = List.map expression es in
+	 T.TaggedValues (T.Constructor k, es)
 
-  in
-  program p
+      | S.IfThenElse (a, b, c) ->
+	 let a = expression a in
+	 let b = expression b in
+	 let c = expression c in
+	 T.IfThenElse(a, b, c)
 
-let translate p env =
-  let closed_p = closure_conversion p in
-  (** To see the result of closure conversion:
+      | S.Case (e, sb) ->
+	 let e = expression e in
+	 let sb = List.map branch sb in
+	 T.Case(e, sb)
+
+      | S.Apply (e1, e2) as e ->
+	 failwith "Student! This is your job!71"
+
+      | S.Fun ((env, _), e) ->
+	 failwith "Student! This is your job!72"
+
+      | S.RecFuns rfs ->
+	 failwith "Student! This is your job!73"
+    in
+    locate pos (aux e)
+
+      and literal = function
+	| S.LInt l ->
+	   T.LInt l
+
+      and branch (S.Branch (p, e)) =
+	let p = pattern p in
+	let e = expression e in
+	T.Branch(p, e)
+
+      and pattern p =
+	Position.with_pos
+	  (Position.position p)
+	  (match Position.value p with
+	   | S.PWildcard -> T.PWildcard
+	   | S.PVariable id -> T.PVariable (identifier id)
+	   | S.PTuple ids -> T.PTuple (List.map identifier ids)
+	   | S.PTaggedValues (t, ids) -> T.PTaggedValues(tag t, List.map identifier ids)
+	  )
+
+      and identifier (S.Id x) = T.Id x
+      and tag (S.Constructor x) = T.Constructor x
+       in
+       program p
+
+       let translate p env =
+	 let closed_p = closure_conversion p in
+	 (** To see the result of closure conversion:
   print_endline ("CC: " ^ Hopix.print_ast closed_p ^ "\n");
   flush stdout;
-   *)
-  (hoist closed_p, ())
+	  *)
+	 (hoist closed_p, ())
