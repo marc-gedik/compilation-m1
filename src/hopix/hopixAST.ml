@@ -88,4 +88,4 @@ let is_binary_primitive = function
   | _ -> false
 
 let free_variables : expression -> identifier list =
-     failwith "Student! This is your job!"
+  fun e -> []

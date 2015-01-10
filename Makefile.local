@@ -1,4 +1,4 @@
-# -*- makefile -*-
+# -*- makefile-gmake -*-
 
 ###########################
 ## Package configuration ##
@@ -12,17 +12,17 @@ STUDENTS=marc-gedik_salim-abdelfettah
 
 ifeq ($(strip $(STUDENTS)),)
 detect-bad-students:
-	@echo "               !! WARNING !!                          "
+	@echo "		      !! WARNING !!			     "
 	@echo "******************************************************"
 	@echo "* You MUST define the STUDENTS environment variable. *"
-	@echo "* (in the shell or in the Makefile.local)            *"
+	@echo "* (in the shell or in the Makefile.local)	    *"
 	@echo "******************************************************"
-	@echo "               !! WARNING !!                          "
+	@echo "		      !! WARNING !!			     "
 STUDENTS = $(shell echo $$USER)
 endif
 
-VERSION   = 14.1
-TARGET    = flap
+VERSION	  = 14.2
+TARGET	  = flap
 TARGETEXT = flap
-PACKAGE   = flap-$(STUDENTS)-$(VERSION)
+PACKAGE	  = flap-$(STUDENTS)-$(VERSION)
 

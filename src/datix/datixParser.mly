@@ -128,7 +128,7 @@ expression:
 | e1=located(expression) SEMICOLON e2=located(expression) {
   Define (Position.map (fun _ -> PWildcard) e1, e1, e2)
 }
-| LBRACKET es=separated_nonempty_list(COMMA, located(expression)) RBRACKET {
+| LBRACKET es=separated_list(COMMA, located(expression)) RBRACKET {
   Tuple es
 }
 | LPAREN es=separated_nonempty_list(COMMA, located(expression)) RPAREN {

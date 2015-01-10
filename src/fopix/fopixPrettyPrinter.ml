@@ -80,8 +80,7 @@ and funcall f es =
 
 and literal = function
   | LInt x -> string (string_of_int x)
-  | LFun (FunId f) -> string f
-
+  | LFun (FunId f) -> string ("&" ^ f)
 
 let to_string f x =
   let b = Buffer.create 13 in
