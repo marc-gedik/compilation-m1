@@ -243,18 +243,18 @@ let typecheck tenv ast =
        failwith "MutataTuple typechecker"
 
     | Fun (x, e) ->
-       let id, typ = lambda pos x in
+       let id, xTyp = lambda pos x in
+       let tenv = TypingEnvironment.bind tenv id xTyp in
        let eTyp = infer_expression_type tenv e in
-       TyArrow (eTyp, typ)
+       TyArrow (xTyp, eTyp)
 
     | RecFuns fs ->
-       let typ =
+       let xTyp =
 	 List.map (fun (x, _) -> lambda (Position.position x) (Position.value x)) fs in
-       let eTyp =
-	 List.map (fun (_, e) -> infer_expression_type tenv e) fs in
-       let tyArrows =
-	 List.map2 (fun eTyp (_,typ) -> TyArrow(eTyp, typ)) eTyp typ in
-       TyTuple(tyArrows)
+       let tenv =
+	 List.fold_left (fun tenv (x,y) -> TypingEnvironment.bind tenv x y) tenv xTyp in
+       let _ = List.map2 (fun (_, e) (_,x) -> check_expression_type tenv x e) fs xTyp in
+       TyTuple(snd (List.split xTyp))
 
     | Apply (a, b) ->
        let ta = infer_expression_type tenv a in

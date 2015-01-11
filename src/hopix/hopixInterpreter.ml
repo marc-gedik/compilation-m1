@@ -37,6 +37,9 @@ let primitive ?(error = fun () -> assert false) coercion wrapper f =
       | Some x -> wrapper (f x)
   )
 
+let tag (Constructor id) =
+  id
+
 let print_value v =
   let max_depth = 20 in
 
@@ -65,8 +68,6 @@ let print_value v =
   and print_field d (Label l, v) =
     l ^ " = " ^ print_value d v
 
-  and tag (Constructor id) =
-    id
   in
   print_value 0 v
 
