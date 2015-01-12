@@ -260,6 +260,7 @@ let typecheck tenv ast =
        let ta = infer_expression_type tenv a in
        (match ta with
 	| TyArrow (typ, ret) -> check_expression_type tenv typ b; ret
+	| TyIdentifier _ -> ta
 	| _ -> error pos "Not applicable"
        )
 
