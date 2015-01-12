@@ -34,7 +34,12 @@ let empty_environment = {
 }
 
 let lookup_environment env x =
-  List.assoc x env.variables
+  try
+    List.assoc x env.variables
+  with Not_found ->
+    let S.Id s = x in
+    let _ =  Printf.printf "%s : " s in
+    raise Not_found
 
 let bind env x e = {
   variables = (x, e) :: env.variables
@@ -121,7 +126,19 @@ let closure_conversion : HopixAST.t -> HopixAST.t =
     (** [proj pos what idx n] is the code that extracts from [what] the
       component [idx] of a tuple of size [n]. *)
     let proj pos what idx over =
-      failwith "Student! This is your job!45"
+      let id = fresh_var () in
+      let rec aux i =
+	let x = if i = idx
+		then id
+		else Id "_"
+	in
+	if i = 0
+	then [x]
+	else x::(aux (i-1))
+      in
+      let ps = locate pos (PTuple (aux (over-1))) in
+      let es = locate pos (Variable id) in
+      locate pos (Case(what, [Branch(ps, es)]))
     in
 
 
@@ -130,64 +147,108 @@ let closure_conversion : HopixAST.t -> HopixAST.t =
 
     and definition pos = function
       | DefineValue (p, e) ->
+
+	 let env = bind_pattern empty_environment p in
+	 let e = expression' env e in
 	 DefineValue (p, e)
 
       | DefineType (tid, tdef) ->
-	 failwith "Student! This is your job!47"
+	 DefineType (tid, tdef)
 
     and expression' env e =
       expression_aux env (Position.position e) (Position.value e)
 
     and expression e =
-      expression_aux empty_environment e
+      expression_aux empty_environment (Position.position e) (Position.value e)
 
     (** [expression_aux env pos e] translates an expression [e]
       into a compiled expression [e]. If [e] is inside the
       body of a function then [env] is not empty and contains
       the compiled code for the identifier occurring in [e]. *)
-    and expression_aux env pos =
+    and expression_aux env pos e =
       let locate = Position.with_pos pos in
-      function
-      | MutateTuple _ ->
-	 failwith "Student! This is your job!52"
+      let aux = function
+	| MutateTuple _ ->
+	   failwith "Student! This is your job!52"
 
-      | Literal l ->
-	 locate (Literal l)
+	| Literal l ->
+	   Literal l
 
-      | Variable x ->
-	 locate (Variable x)
+	| Variable x ->
+	   (try lookup_environment env x
+	   with Not_found -> Variable x)
 
-      | Define (p, e1, e2) ->
-	 let e1 = expression' env e1 in
-	 let e2 = expression' env e2 in
-	 locate (Define (p, e1, e2))
+	| Define (p, e1, e2) ->
+	   let e1 = expression' env e1 in
+	   let env = bind_pattern env p in
+	   let e2 = expression' env e2 in
+	   Define (p, e1, e2)
 
-      | Tuple es ->
-	 failwith "Student! This is your job!52"
+	| Tuple es ->
+	   Tuple (List.map (expression' env) es)
 
-      | Record rs ->
-	 failwith "Student! This is your job!52"
+	| Record rs ->
+	   Record (List.map (fun (lbl, e) -> (lbl, expression' env e)) rs)
 
-      | RecordField (e, f) ->
-	 failwith "Student! This is your job!53"
+	| RecordField (e, f) ->
+	   RecordField (expression' env e, f)
 
-      | TaggedValues (k, es) ->
-	 failwith "Student! This is your job!54"
+	| TaggedValues (k, es) ->
+	   TaggedValues (k, List.map (expression' env) es)
 
-      | IfThenElse (a, b, c) ->
-	 failwith "Student! This is your job!55"
+	| IfThenElse (a, b, c) ->
+	   let a = expression' env a in
+	   let b = expression' env b in
+	   let b = expression' env b in
+	   IfThenElse (a, b, c)
 
-      | Case (e, bs) ->
-	 failwith "Student! This is your job!56"
+	| Case (e, bs) ->
+	   Case (expression' env e, List.map (branch env) bs)
 
-      | Apply (e1, e2) as e ->
-	 failwith "Student! This is your job!57"
+	| Apply (e1, e2) as e ->
+	   (match classify_application e with
+	    | PrimitiveApplication (id, l) ->
+	       applys pos id (List.map (expression' env) l)
+	    | GeneralApplication (e1, e2) ->
+	       let e1 = expression' env e1 in
+	       let e2 = expression' env e2 in
 
-      | Fun ((x, ty), e) as l ->
-	 failwith "Student! This is your job!58"
+	       let id = fresh_var () in
+	       let pId = Position.with_pos pos (PVariable id) in
+	       let xId = locate (Variable id) in
+               let fst = proj pos e1 0 2 in
+               let snd = proj pos e1 1 2 in
 
-      | RecFuns rfs ->
-	 failwith "Student! This is your job!59"
+
+	       Define (pId, locate (Apply (snd, fst)), xId)
+	   )
+
+	| Fun ((x, ty), e) as l ->
+	   let freeVariables = free_variables l in
+	   let closure_vars = List.map (fun x -> Variable x |> locate) freeVariables in
+
+	   let len = List.length freeVariables in
+
+	   let fun_env = bind_local empty_environment x in
+	   let _env = fresh_env_var () in
+	   let xEnv = locate (Variable _env) in
+
+	   let variables = List.mapi (fun i x -> Position.value (proj pos xEnv i len)) freeVariables in
+	   let fun_env = List.fold_left2 bind fun_env freeVariables variables in
+
+	   let closure_vars = locate (Tuple closure_vars) in
+
+	   let e = expression' fun_env e in
+
+	   (* fun _env (x:y) -> e *)
+	   let _fun = locate (Fun ((_env, None), locate (Fun ((x, ty), e)))) in
+
+	   Tuple [closure_vars; _fun]
+
+	| RecFuns rfs ->
+	   failwith "Student! This is your job!59"
+      in
+      locate (aux e)
 
     (**
 
@@ -219,12 +280,16 @@ let closure_conversion : HopixAST.t -> HopixAST.t =
      *)
 
     and branch env (Branch (p, e)) =
-      failwith "Student! This is your job!60"
+      let env = bind_pattern env p in
+      let e = expression' env e in
+      Branch(p, e)
 
     and bind_pattern env p =
-      failwith "Student! This is your job!61"
-
-
+      match Position.value p with
+      | PWildcard -> env
+      | PVariable id -> bind_local env id
+      | PTuple ids
+      | PTaggedValues (_, ids) -> List.fold_left bind_local env ids
     in
     program
   )
@@ -275,6 +340,9 @@ let hoist : HopixAST.t -> DatixAST.t =
       into a compiled expression [e]. *)
   and expression_aux pos e =
     let aux = function
+      | S.MutateTuple _ ->
+	 failwith "Student! This is your job! : MutatTuple"
+
       | S.Literal l ->
 	 T.Literal (literal l)
 
@@ -315,7 +383,12 @@ let hoist : HopixAST.t -> DatixAST.t =
 	 T.Case(e, sb)
 
       | S.Apply (e1, e2) as e ->
-	 failwith "Student! This is your job!71"
+	 (match classify_application e with
+	  | PrimitiveApplication (S.Id id, l) ->
+	     T.(FunCall (FunId id, List.map expression l))
+	  | GeneralApplication (e1, e2) ->
+	     failwith "ahah"
+	 )
 
       | S.Fun ((env, _), e) ->
 	 failwith "Student! This is your job!72"
@@ -346,13 +419,13 @@ let hoist : HopixAST.t -> DatixAST.t =
 
       and identifier (S.Id x) = T.Id x
       and tag (S.Constructor x) = T.Constructor x
-       in
+  in
        program p
 
        let translate p env =
 	 let closed_p = closure_conversion p in
-	 (** To see the result of closure conversion:
+	 (** To see the result of closure conversion: *)
   print_endline ("CC: " ^ Hopix.print_ast closed_p ^ "\n");
   flush stdout;
-	  *)
+
 	 (hoist closed_p, ())
