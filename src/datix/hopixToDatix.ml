@@ -387,11 +387,24 @@ let hoist : HopixAST.t -> DatixAST.t =
 	  | PrimitiveApplication (S.Id id, l) ->
 	     T.(FunCall (FunId id, List.map expression l))
 	  | GeneralApplication (e1, e2) ->
-	     failwith "ahah"
+	     let e1 = expression e1 in
+	     let rec es e = match Position.value e with
+	       | S.Apply (e1, e2) -> es e2
+	       | _ -> [expression e]
+	     in let e2 = es e2 in
+	     T.UnknownFunCall (e1, e2)
 	 )
 
-      | S.Fun ((env, _), e) ->
-	 failwith "Student! This is your job!72"
+      | S.Fun ((env, typ), e) ->
+	 let rec descend e = match Position.value e with
+	   | S.Fun ((formal, _), e) ->
+	      let formals, e = descend e in
+	      (identifier formal, tydummy)::formals, e
+	   | _ -> [identifier env, tydummy], (expression e)
+	 in
+	 let x = descend e in
+	 let f = push_new_function pos (fst x) (snd x)  in
+	 T.(Literal (LFun f))
 
       | S.RecFuns rfs ->
 	 failwith "Student! This is your job!73"
@@ -425,7 +438,7 @@ let hoist : HopixAST.t -> DatixAST.t =
        let translate p env =
 	 let closed_p = closure_conversion p in
 	 (** To see the result of closure conversion: *)
-  print_endline ("CC: " ^ Hopix.print_ast closed_p ^ "\n");
-  flush stdout;
+  (* print_endline ("CC: " ^ Hopix.print_ast closed_p ^ "\n"); *)
+  (* flush stdout; *)
 
 	 (hoist closed_p, ())

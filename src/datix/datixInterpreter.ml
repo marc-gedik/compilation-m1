@@ -184,6 +184,16 @@ and is_binary_primitive = function
   | _ -> false
 
 and expression position runtime = function
+  | MutateTuple _ ->
+     failwith "MutateTuple"
+
+  | UnknownFunCall (e, args) ->
+     let formals, e = match expression' runtime e with
+       | VFun f -> FunEnv.find f runtime.funEnvironment
+       | _ -> assert false
+     in
+     expression' runtime e
+
   | RecordField (e, l) ->
      let VRecord recs = expression' runtime e in
      let value = List.assoc l recs in
@@ -203,6 +213,9 @@ and expression position runtime = function
 
   | Case (e, bs) ->
      branches runtime (expression' runtime e) bs
+
+  | Literal (LFun l) ->
+     VFun l
 
   | Literal l ->
      literal l
