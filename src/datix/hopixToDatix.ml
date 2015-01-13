@@ -211,16 +211,17 @@ let closure_conversion : HopixAST.t -> HopixAST.t =
 	       applys pos id (List.map (expression' env) l)
 	    | GeneralApplication (e1, e2) ->
 	       let e1 = expression' env e1 in
-	       let e2 = expression' env e2 in
 
-	       let id = fresh_var () in
-	       let pId = Position.with_pos pos (PVariable id) in
-	       let xId = locate (Variable id) in
                let fst = proj pos e1 0 2 in
                let snd = proj pos e1 1 2 in
 
+	       let e2 = expression' env e2 in
+	       let id = fresh_var () in
+	       let pId = Position.with_pos pos (PVariable id) in
+	       let xId = locate (Variable id) in
 
-	       Define (pId, locate (Apply (snd, fst)), xId)
+	       (* let f1 = ((snd g) (fst g) 1) in ??? *)
+	       Define (pId, locate (Apply (snd, locate (Apply (fst, e2)))), locate (Apply (xId, e2)))
 	   )
 
 	| Fun ((x, ty), e) as l ->
@@ -389,7 +390,7 @@ let hoist : HopixAST.t -> DatixAST.t =
 	  | GeneralApplication (e1, e2) ->
 	     let e1 = expression e1 in
 	     let rec es e = match Position.value e with
-	       | S.Apply (e1, e2) -> es e2
+	       | S.Apply (e1, e2) -> (expression e)::es e2
 	       | _ -> [expression e]
 	     in let e2 = es e2 in
 	     T.UnknownFunCall (e1, e2)
@@ -402,8 +403,8 @@ let hoist : HopixAST.t -> DatixAST.t =
 	      (identifier formal, tydummy)::formals, e
 	   | _ -> [identifier env, tydummy], (expression e)
 	 in
-	 let x = descend e in
-	 let f = push_new_function pos (fst x) (snd x)  in
+	 let formals,e = descend e in
+	 let f = push_new_function pos (List.rev formals) (e)  in
 	 T.(Literal (LFun f))
 
       | S.RecFuns rfs ->
@@ -438,7 +439,7 @@ let hoist : HopixAST.t -> DatixAST.t =
        let translate p env =
 	 let closed_p = closure_conversion p in
 	 (** To see the result of closure conversion: *)
-  (* print_endline ("CC: " ^ Hopix.print_ast closed_p ^ "\n"); *)
-  (* flush stdout; *)
+   (* print_endline ("CC: " ^ Hopix.print_ast closed_p ^ "\n");  *)
+   (* flush stdout;  *)
 
 	 (hoist closed_p, ())

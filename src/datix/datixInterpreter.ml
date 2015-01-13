@@ -190,7 +190,7 @@ and expression position runtime = function
   | UnknownFunCall (e, args) ->
      let formals, e = match expression' runtime e with
        | VFun f -> FunEnv.find f runtime.funEnvironment
-       | _ -> assert false
+       | _ -> [], e
      in
      expression' runtime e
 
